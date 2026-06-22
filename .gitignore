@@ -1,0 +1,20 @@
+# deps / build
+node_modules/
+dist/
+build/
+.next/
+target/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# local agent tooling (gitignored on purpose)
+CLAUDE.md
+.claude/
+
+# os / editor
+.DS_Store
+*.log

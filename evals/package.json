@@ -1,0 +1,10 @@
+{
+  "name": "@promptward/evals",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Eval harness: runs the detectors over labeled datasets and reports precision / recall / F1. This is the credibility centerpiece -- the README's numbers come from here.",
+  "scripts": {
+    "run": "echo 'TODO(build): run the detectors over datasets/*.jsonl and print a precision/recall/F1 table.' && exit 1"
+  }
+}

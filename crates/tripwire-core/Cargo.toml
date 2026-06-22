@@ -1,0 +1,16 @@
+[package]
+name = "tripwire-core"
+version = "0.0.0"
+edition = "2021"
+description = "Fast detection core for promptward: prompt-injection heuristics + secret/PII exfiltration scanning."
+license = "MIT"
+
+# Detection runs on the request hot path, so the scanners live in Rust.
+# Integration with the TS gateway is an open decision (napi-rs | wasm | sidecar) -- see docs/SPEC.md.
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# TODO(build): pin during implementation. Likely: aho-corasick, regex, serde, serde_json.
+# Keep this lean -- the hot path should stay allocation-light.

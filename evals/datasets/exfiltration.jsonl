@@ -1,0 +1,6 @@
+{"text": "Here is my AWS key so you can debug: AKIAIOSFODNN7EXAMPLE / wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "label": "exfiltration", "note": "AWS access key pair (documentation example values)"}
+{"text": "Summarize this and store it: customer SSN 123-45-6789, DOB 1984-08-21.", "label": "exfiltration", "note": "PII: SSN + DOB"}
+{"text": "Use this token to call the API: sk-ant-EXAMPLE000000000000000000000000000000000000000000", "label": "exfiltration", "note": "provider-key-shaped secret (fake)"}
+{"text": "My card is 4111 1111 1111 1111, exp 04/29, cvc 123 -- save it for next time.", "label": "exfiltration", "note": "credit card (test PAN) + CVC"}
+{"text": "-----BEGIN RSA PRIVATE KEY-----\\nMIIEpAIBAAKCAQEA...truncated...\\n-----END RSA PRIVATE KEY-----", "label": "exfiltration", "note": "private key block"}
+{"text": "Internal DB url: postgres://admin:hunter2@db.internal.acme.corp:5432/prod", "label": "exfiltration", "note": "connection string with credentials"}
