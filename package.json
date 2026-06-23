@@ -8,7 +8,7 @@
   "scripts": {
     "gateway": "pnpm --filter @promptward/gateway dev",
     "dashboard": "pnpm --filter @promptward/dashboard dev",
-    "eval": "pnpm --filter @promptward/evals run",
+    "eval": "pnpm --filter @promptward/evals eval",
     "core:build": "pnpm --filter @promptward/tripwire build",
     "core:build:debug": "pnpm --filter @promptward/tripwire build:debug"
   }
