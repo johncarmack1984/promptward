@@ -15,6 +15,7 @@ import { loadConfig, type Config } from "./config.js";
 import { makeStore, type EventStore } from "./store.js";
 import { handle } from "./pipeline.js";
 import { anthropicAdapter } from "./providers/anthropic.js";
+import { openaiAdapter } from "./providers/openai.js";
 
 export interface App {
   app: Hono;
@@ -37,15 +38,18 @@ export async function createApp(config: Config = loadConfig()): Promise<App> {
     return c.json({ requests, stats });
   });
 
-  // Anthropic-compatible proxy. (OpenAI /v1/chat/completions lands in T10.)
-  app.post("/v1/messages", async (c) => {
-    const body: unknown = await c.req.json();
-    const res = await handle(anthropicAdapter(config), body, store, config);
-    return new Response(JSON.stringify(res.body), {
-      status: res.status,
-      headers: { "content-type": "application/json", ...(res.headers ?? {}) },
-    });
-  });
+  // Wire-compatible proxy routes. Same pipeline; the adapter handles the shape.
+  const proxy = (adapter: (cfg: Config) => ReturnType<typeof anthropicAdapter>) =>
+    async (c: { req: { json: () => Promise<unknown> } }) => {
+      const body: unknown = await c.req.json();
+      const res = await handle(adapter(config), body, store, config);
+      return new Response(JSON.stringify(res.body), {
+        status: res.status,
+        headers: { "content-type": "application/json", ...(res.headers ?? {}) },
+      });
+    };
+  app.post("/v1/messages", proxy(anthropicAdapter)); // Anthropic
+  app.post("/v1/chat/completions", proxy(openaiAdapter)); // OpenAI
 
   return { app, store, config };
 }

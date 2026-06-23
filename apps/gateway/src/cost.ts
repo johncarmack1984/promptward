@@ -13,7 +13,9 @@ export const PRICES: Record<string, Price> = {
   "claude-sonnet-4-6": { inputPer1M: 3.0, outputPer1M: 15.0 },
   "claude-haiku-4-5": { inputPer1M: 1.0, outputPer1M: 5.0 },
   "claude-fable-5": { inputPer1M: 10.0, outputPer1M: 50.0 },
-  // OpenAI price rows are added with the OpenAI provider path.
+  // OpenAI rows are intentionally omitted: their prices are not pinned here, so
+  // OpenAI requests record costUsd=null with costUnpriced=true rather than a
+  // fabricated number. Add verified rows to price them.
 };
 
 export interface CostResult {
