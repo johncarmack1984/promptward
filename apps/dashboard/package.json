@@ -5,10 +5,11 @@
   "type": "module",
   "description": "Security console for the promptward gateway: detection-rate proof, request log, and per-call cost.",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "sync-results": "node scripts/sync-results.mjs",
+    "dev": "node scripts/sync-results.mjs && vite",
+    "build": "node scripts/sync-results.mjs && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "node scripts/sync-results.mjs && tsc -b --noEmit"
   },
   "dependencies": {
     "react": "^18.3.1",

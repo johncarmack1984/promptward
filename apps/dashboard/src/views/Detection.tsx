@@ -114,8 +114,13 @@ export function Detection() {
           <h3>What it means for a runtime filter</h3>
           <div className="kv">
             <div className="kv__row">
-              <span className="kv__k">Recall at &le;1% false-positive rate</span>
-              <span className="kv__v good">{pct(m.recallAt1pctFpr.recall)}</span>
+              <span className="kv__k">
+                Recall at 0 benign FP
+                <span className="kv__sub">
+                  n={m.recallAtZeroBenignFp.benignN}; 1% FPR not resolvable
+                </span>
+              </span>
+              <span className="kv__v good">{pct(m.recallAtZeroBenignFp.recall)}</span>
             </div>
             <div className="kv__row">
               <span className="kv__k">

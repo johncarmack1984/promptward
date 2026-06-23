@@ -4,12 +4,14 @@
  * Loads datasets/{injection,exfiltration,benign}.jsonl, runs each example through
  * the Rust detection core (via the @promptward/tripwire napi binding), and reports
  * precision / recall / F1 per attack class and per bucket, an attack-vs-benign
- * confusion matrix, Recall @ 1% false-positive rate, the benign false-positive
- * rate, and scan latency. Deterministic: scan is pure, so the detection numbers
- * are identical across runs (only latency varies).
+ * confusion matrix, Recall @ 0 benign false positives (the honest operating
+ * point -- a 1% FPR is not resolvable on a sub-100 benign set), the benign
+ * false-positive rate, and scan latency. Deterministic: scan is pure, so the
+ * detection numbers are identical across runs (only latency varies).
  *
- * Output is a markdown table (-> README) plus evals/results.json (-> README,
- * dashboard). Numbers must be a real run, never hand-written.
+ * Output is a markdown table (-> README) plus evals/results.json, which the
+ * dashboard imports verbatim (synced by apps/dashboard/scripts/sync-results.mjs;
+ * single source of truth). Numbers must be a real run, never hand-written.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -119,15 +121,29 @@ function classMetrics(scored: Scored[], label: Label, pick: (s: Scored) => numbe
   return prf(tp, fp, fn);
 }
 
-function recallAt1pctFpr(scored: Scored[]): { threshold: number; recall: number; allowedFp: number } {
+// Operating point: the strictest threshold that flags zero benign examples, and
+// the attack recall there. We deliberately do NOT call this "Recall @ 1% FPR":
+// with a benign set this small, 1% is below the resolution of the corpus --
+// floor(0.01 * n) rounds the allowed false positives to 0 for any n < 100 -- so
+// the honest operating point is "Recall @ 0 benign FP". The effective FPR is
+// reported alongside so the number can never be read as a measured 1%.
+function recallAtZeroBenignFp(scored: Scored[]): {
+  threshold: number;
+  recall: number;
+  allowedFp: number;
+  benignN: number;
+  effectiveFprPct: number;
+} {
   const benign = scored.filter((s) => s.ex.label === "benign").map((s) => s.attack);
   const attacks = scored.filter((s) => s.ex.label !== "benign").map((s) => s.attack);
   benign.sort((a, b) => b - a);
-  const allowedFp = Math.floor(0.01 * benign.length);
+  const benignN = benign.length;
+  const allowedFp = Math.floor(0.01 * benignN);
   // Lowest threshold that flags at most `allowedFp` benign examples.
   const threshold = (benign[allowedFp] ?? 0) + 1e-9;
   const recall = attacks.filter((a) => a >= threshold).length / (attacks.length || 1);
-  return { threshold: Number(threshold.toFixed(3)), recall, allowedFp };
+  const effectiveFprPct = benignN ? (100 * allowedFp) / benignN : 0;
+  return { threshold: Number(threshold.toFixed(3)), recall, allowedFp, benignN, effectiveFprPct };
 }
 
 function pct(x: number): string {
@@ -161,7 +177,7 @@ function main(): void {
   const overall = prf(tp, fp, fn);
   const benignTotal = tn + fp;
   const benignFpr = benignTotal ? fp / benignTotal : 0;
-  const ra = recallAt1pctFpr(scored);
+  const ra = recallAtZeroBenignFp(scored);
 
   // Per-bucket: recall for attack buckets, false-positive rate for benign buckets.
   const buckets: Record<string, { label: Label; count: number; detected: number; rate: number }> = {};
@@ -196,9 +212,14 @@ function main(): void {
     perClass: { injection, exfiltration },
     overall,
     benignFalsePositiveRate: benignFpr,
-    recallAt1pctFpr: ra,
+    recallAtZeroBenignFp: ra,
     confusion: { tp, fp, fn, tn },
     buckets,
+    caveats: [
+      "Scores are calibrated on the same labeled corpus they are measured on (no held-out split); read these as an upper bound for this corpus, not a generalization estimate.",
+      `Benign set is small (n=${ra.benignN}); a 1% false-positive rate is not resolvable below n=100, so the operating point is reported as Recall @ 0 benign FP, not Recall @ 1% FPR.`,
+      "Static corpus: a fixed dataset overstates robustness against an adaptive attacker; treat the rate as a regression signal, not a security guarantee.",
+    ],
   };
   const performanceBlock = {
     perScanMsP50: p(0.5),
@@ -225,7 +246,7 @@ function main(): void {
     `\nBenign false-positive rate: ${pct(benignFpr)}%  (${fp}/${benignTotal})`,
   );
   console.log(
-    `Recall @ <=1% FPR: ${pct(ra.recall)}%  (threshold ${ra.threshold}, <=${ra.allowedFp} benign FP allowed)`,
+    `Recall @ 0 benign FP: ${pct(ra.recall)}%  (threshold ${ra.threshold}; ${ra.allowedFp}/${ra.benignN} benign flagged, effective FPR ${ra.effectiveFprPct.toFixed(1)}%; 1% FPR unresolvable at n=${ra.benignN})`,
   );
   console.log(`Confusion (attack/benign): TP ${tp}  FP ${fp}  FN ${fn}  TN ${tn}`);
   console.log(`Scan latency: p50 ${performanceBlock.perScanMsP50}ms  p95 ${performanceBlock.perScanMsP95}ms\n`);
@@ -239,15 +260,15 @@ function main(): void {
 
   // CI gate: fail if detection regresses below pinned floors (overridable).
   const minF1 = Number(process.env.PROMPTWARD_MIN_F1 ?? 0.9);
-  const minRecall1 = Number(process.env.PROMPTWARD_MIN_RECALL_1PCT ?? 0.9);
-  if (overall.f1 < minF1 || ra.recall < minRecall1) {
+  const minRecall0 = Number(process.env.PROMPTWARD_MIN_RECALL_0FP ?? 0.9);
+  if (overall.f1 < minF1 || ra.recall < minRecall0) {
     console.error(
-      `\nFAIL: overall F1 ${pct(overall.f1)}% (floor ${pct(minF1)}%) or Recall@1%FPR ${pct(ra.recall)}% (floor ${pct(minRecall1)}%) below threshold`,
+      `\nFAIL: overall F1 ${pct(overall.f1)}% (floor ${pct(minF1)}%) or Recall@0benignFP ${pct(ra.recall)}% (floor ${pct(minRecall0)}%) below threshold`,
     );
     process.exit(1);
   }
   console.log(
-    `PASS: F1 ${pct(overall.f1)}% >= ${pct(minF1)}%, Recall@1%FPR ${pct(ra.recall)}% >= ${pct(minRecall1)}%`,
+    `PASS: F1 ${pct(overall.f1)}% >= ${pct(minF1)}%, Recall@0benignFP ${pct(ra.recall)}% >= ${pct(minRecall0)}%`,
   );
 }
 

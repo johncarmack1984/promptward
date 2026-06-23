@@ -90,9 +90,16 @@ export interface EvalResults {
     perClass: { injection: ClassMetric; exfiltration: ClassMetric };
     overall: ClassMetric;
     benignFalsePositiveRate: number;
-    recallAt1pctFpr: { threshold: number; recall: number; allowedFp: number };
+    recallAtZeroBenignFp: {
+      threshold: number;
+      recall: number;
+      allowedFp: number;
+      benignN: number;
+      effectiveFprPct: number;
+    };
     confusion: { tp: number; fp: number; fn: number; tn: number };
     buckets: Record<string, Bucket>;
+    caveats: string[];
   };
   performance: {
     perScanMsP50: number;
