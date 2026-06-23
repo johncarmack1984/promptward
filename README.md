@@ -4,6 +4,10 @@ An LLM gateway that catches what actually hurts in production -- **prompt inject
 
 Point your OpenAI or Anthropic SDK at promptward instead of the provider. It stays wire-compatible, scans every request through a fast Rust detection core, blocks or redacts on policy, validates the model's structured output against your schema, and records tokens + cost per call.
 
+![promptward detection console: measured precision, recall, and F1 with per-class recall by attack type](docs/img/detection.webp)
+
+*The console's Detection view -- the eval rendered live. Every number is produced by `pnpm eval`, not hand-written.*
+
 ## Detection rate
 
 Measured by `pnpm eval` over a labeled corpus of 171 examples (72 injection, 48 exfiltration, 51 benign). The table is generated from `evals/results.json` -- a real run, not estimates.
@@ -58,6 +62,10 @@ SDK (baseURL -> promptward)
 ```
 
 The detection core runs a fixed, deterministic pipeline: NFKC-normalize and reveal unicode-tag / zero-width / bidi smuggling, decode-then-rescan base64/hex/url/rot13 payloads, then source-aware injection heuristics and value-shape secret/PII detection. Spans map back to the original bytes for precise redaction.
+
+![promptward requests view: live log of proxied calls with policy action, findings, cost, and latency](docs/img/requests.webp)
+
+*The Requests view -- every proxied call, newest first, scanned inbound and outbound; expand a row for the findings behind each block or redact.*
 
 ## What's built
 
