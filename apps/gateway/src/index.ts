@@ -5,8 +5,9 @@
  * validate structured output (retry on miss) -> scan outbound -> record tokens,
  * cost, and findings. Point your SDK's baseURL here; it stays wire-compatible.
  *
- * T8 ships the app shell, config, event store, and read routes. The proxy
- * pipeline (/v1/messages, /v1/chat/completions) mounts in T9/T10.
+ * This module wires the app shell (config, event store, dashboard read routes)
+ * and mounts the proxy pipeline at /v1/messages (Anthropic) and
+ * /v1/chat/completions (OpenAI).
  */
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";

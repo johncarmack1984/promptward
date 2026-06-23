@@ -1,4 +1,4 @@
-import type { PolicyAction, Severity } from "./types";
+import type { Severity } from "./types";
 
 export function pct(fraction: number, digits = 1): string {
   return `${(fraction * 100).toFixed(digits)}%`;
@@ -36,19 +36,6 @@ export function clockTime(iso: string): string {
   return TIME_FMT.format(d);
 }
 
-export function relativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return "";
-  const delta = Math.max(0, Date.now() - then);
-  const s = Math.floor(delta / 1000);
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
-
 // Severity ordering for sorting and for picking a record's worst finding.
 export const SEVERITY_RANK: Record<Severity, number> = {
   Critical: 5,
@@ -56,10 +43,4 @@ export const SEVERITY_RANK: Record<Severity, number> = {
   Medium: 3,
   Low: 2,
   Info: 1,
-};
-
-export const ACTION_LABEL: Record<PolicyAction, string> = {
-  allow: "allow",
-  redact: "redact",
-  block: "block",
 };

