@@ -88,6 +88,15 @@ client = OpenAI(base_url="http://localhost:8787/v1")
 
 Every call is scanned inbound and outbound: prompt injection is blocked, secrets and PII are redacted (and surfaced in an `x-promptward-redacted` header), structured output is validated against your JSON Schema with bounded retry, and tokens + cost are recorded. Set `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` to proxy real calls (see `.env.example`).
 
+## Roadmap
+
+The MVP is complete and measured. Post-MVP, in rough priority order:
+
+- **Streaming** -- SSE passthrough for both providers, scanning the outbound stream incrementally so detection holds without buffering the whole response.
+- **Tool-calling triage** -- treat tool-call arguments and tool results as first-class scan sources, so injection arriving across a tool boundary is caught the same way as a user turn.
+- **Shadow-AI browser extension** -- a manifest-v3 content script that runs the same Rust detectors (compiled to wasm) against in-browser LLM usage.
+- **Postgres at scale** -- the store interface and `DATABASE_URL` path already exist; exercise and tune them for high-volume event recording (the default stays in-memory).
+
 ## License
 
 MIT
