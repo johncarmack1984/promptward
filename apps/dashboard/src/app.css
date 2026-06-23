@@ -103,6 +103,23 @@
   color: var(--text-dim);
 }
 
+/* Keyboard focus: a visible ring on every interactive control (WCAG 2.4.7). The
+   default outline is near-invisible on the dark theme. Negative offset keeps the
+   ring inside dense rows/tabs; links sit slightly outside. */
+.tab:focus-visible,
+.filter:focus-visible,
+.row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 2px;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .header__spacer {
   flex: 1;
 }
@@ -1198,5 +1215,38 @@ td.r.full {
   .row__latency,
   .row__tokens {
     display: none;
+  }
+}
+
+/* Header fits on phones without clipping the tabs or the source pill. */
+@media (max-width: 640px) {
+  .app__header {
+    padding: 0 12px;
+  }
+  .brand {
+    padding-right: 12px;
+    margin-right: 0;
+  }
+  .tab {
+    padding: 0 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* The data source is also stated in the footer, so drop the header pill rather
+     than let the tabs clip off the right edge. The brand collapses to its mark
+     (icon-only) to make room for all three tabs. */
+  .source-pill {
+    display: none;
+  }
+  .brand__name {
+    display: none;
+  }
+  .brand {
+    padding-right: 10px;
+  }
+  .tab {
+    padding: 0 9px;
+    font-size: 11px;
   }
 }
