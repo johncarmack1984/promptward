@@ -37,7 +37,7 @@ Recall by attack class:
 | markdown-image exfiltration | 100% (11/11) |
 | encoded exfiltration | 100% (7/7) |
 
-Methodology: pure-Rust deterministic scan (no network), decision threshold 0.5, hand-curated corpus (every secret is a documentation/fake value), scores calibrated on the same corpus they are measured on (no held-out split). Static corpora overstate robustness, so these numbers are for THIS corpus at its current size -- run `pnpm eval` to reproduce them exactly. The full caveat list ships in `evals/results.json` under `metrics.caveats`.
+Methodology: pure-Rust deterministic scan (no network), decision threshold 0.5, hand-curated corpus (every secret is a documentation/fake value), scores calibrated on the same corpus they are measured on (no held-out split). Static corpora overstate robustness, so these numbers are for THIS corpus at its current size -- run `pnpm eval` to reproduce them exactly. A 3-class confusion matrix (`metrics.confusion3`) ships alongside: every benign example lands in the clean column (zero benign misfires), and the single per-class "false positive" is a cross-class attack row, not a benign one. The benign false-positive rate is operational -- 4 benign rows produce only sub-threshold informational findings that drive no action (`metrics.benignAnyFinding`). The full caveat list ships in `evals/results.json` under `metrics.caveats`.
 
 ## Why this exists
 

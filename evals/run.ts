@@ -75,6 +75,8 @@ interface Scored {
   exf: number;
   obf: number;
   attack: number;
+  /** Whether the row produced ANY finding (including sub-threshold). */
+  hasFinding: boolean;
 }
 
 function scoreExample(ex: Example): Scored {
@@ -88,7 +90,7 @@ function scoreExample(ex: Example): Scored {
     else if (k === "Exfiltration") exf = Math.max(exf, f.score);
     else if (k === "Obfuscation") obf = Math.max(obf, f.score);
   }
-  return { ex, inj, exf, obf, attack: Math.max(inj, exf, obf) };
+  return { ex, inj, exf, obf, attack: Math.max(inj, exf, obf), hasFinding: findings.length > 0 };
 }
 
 interface PRF {
@@ -188,6 +190,25 @@ function main(): void {
   }
   for (const b of Object.values(buckets)) b.rate = b.detected / b.count;
 
+  // 3-class confusion (rows = actual label, cols = predicted class by dominant
+  // signal). Makes cross-class firing explicit: an exfiltration row that also
+  // trips the injection scanner appears off-diagonal, so a per-class "false
+  // positive" is visibly a different attack class, not a benign misfire.
+  // `benignAnyFinding` is the strict-spec view: benign rows with ANY finding,
+  // including sub-threshold informational ones that drive no policy action.
+  const confusion3: Record<string, { injection: number; exfiltration: number; clean: number }> = {
+    injection: { injection: 0, exfiltration: 0, clean: 0 },
+    exfiltration: { injection: 0, exfiltration: 0, clean: 0 },
+    benign: { injection: 0, exfiltration: 0, clean: 0 },
+  };
+  let benignAnyFinding = 0;
+  for (const s of scored) {
+    const predicted: "injection" | "exfiltration" | "clean" =
+      s.attack < THRESHOLD ? "clean" : s.inj >= s.exf ? "injection" : "exfiltration";
+    confusion3[s.ex.label][predicted]++;
+    if (s.ex.label === "benign" && s.hasFinding) benignAnyFinding++;
+  }
+
   // Latency (informational; not part of the deterministic metrics).
   const reps = 5;
   const times: number[] = [];
@@ -214,11 +235,15 @@ function main(): void {
     benignFalsePositiveRate: benignFpr,
     recallAtZeroBenignFp: ra,
     confusion: { tp, fp, fn, tn },
+    confusion3,
+    benignAnyFinding,
     buckets,
     caveats: [
       "Scores are calibrated on the same labeled corpus they are measured on (no held-out split); read these as an upper bound for this corpus, not a generalization estimate.",
       `Benign set is small (n=${ra.benignN}); a 1% false-positive rate is not resolvable below n=100, so the operating point is reported as Recall @ 0 benign FP, not Recall @ 1% FPR.`,
       "Static corpus: a fixed dataset overstates robustness against an adaptive attacker; treat the rate as a regression signal, not a security guarantee.",
+      "Per-class precision counts a row flagged by a DIFFERENT attack class as a false positive; see confusion3 -- against benign-only negatives both classes have zero false positives.",
+      `Benign false-positive rate is operational (a finding at or above the ${THRESHOLD} decision threshold drives an action); benignAnyFinding=${benignAnyFinding} additionally counts benign rows with any sub-threshold informational finding.`,
     ],
   };
   const performanceBlock = {
@@ -256,6 +281,18 @@ function main(): void {
     const kind = b.label === "benign" ? "FP-rate" : "recall ";
     console.log(`  ${name.padEnd(26)} ${kind} ${pct(b.rate).padStart(6)}%  (${b.detected}/${b.count})`);
   }
+  console.log("\n3-class confusion (rows = actual, cols = predicted):");
+  console.log("                     inj    exf  clean");
+  for (const actual of ["injection", "exfiltration", "benign"] as const) {
+    const r = confusion3[actual];
+    console.log(
+      `  ${actual.padEnd(16)} ${String(r.injection).padStart(4)} ${String(r.exfiltration).padStart(6)} ${String(r.clean).padStart(6)}`,
+    );
+  }
+  console.log(
+    `Benign rows with any finding (strict, sub-threshold included): ${benignAnyFinding}/${benignTotal}`,
+  );
+
   console.log("\nWrote evals/results.json");
 
   // CI gate: fail if detection regresses below pinned floors (overridable).

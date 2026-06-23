@@ -48,6 +48,24 @@
       "fn": 3,
       "tn": 51
     },
+    "confusion3": {
+      "injection": {
+        "injection": 69,
+        "exfiltration": 0,
+        "clean": 3
+      },
+      "exfiltration": {
+        "injection": 0,
+        "exfiltration": 48,
+        "clean": 0
+      },
+      "benign": {
+        "injection": 0,
+        "exfiltration": 0,
+        "clean": 51
+      }
+    },
+    "benignAnyFinding": 4,
     "buckets": {
       "direct_injection": {
         "label": "injection",
@@ -125,12 +143,14 @@
     "caveats": [
       "Scores are calibrated on the same labeled corpus they are measured on (no held-out split); read these as an upper bound for this corpus, not a generalization estimate.",
       "Benign set is small (n=51); a 1% false-positive rate is not resolvable below n=100, so the operating point is reported as Recall @ 0 benign FP, not Recall @ 1% FPR.",
-      "Static corpus: a fixed dataset overstates robustness against an adaptive attacker; treat the rate as a regression signal, not a security guarantee."
+      "Static corpus: a fixed dataset overstates robustness against an adaptive attacker; treat the rate as a regression signal, not a security guarantee.",
+      "Per-class precision counts a row flagged by a DIFFERENT attack class as a false positive; see confusion3 -- against benign-only negatives both classes have zero false positives.",
+      "Benign false-positive rate is operational (a finding at or above the 0.5 decision threshold drives an action); benignAnyFinding=4 additionally counts benign rows with any sub-threshold informational finding."
     ]
   },
   "performance": {
-    "perScanMsP50": 0.0175,
-    "perScanMsP95": 0.0315,
+    "perScanMsP50": 0.0159,
+    "perScanMsP95": 0.0279,
     "scansTimed": 855
   }
 }
