@@ -115,4 +115,33 @@ describe("anthropic adapter -- source-aware scan + redaction", () => {
     expect(content).toContain("[REDACTED:aws_access_key]");
     expect(content).toContain("\u{1F4DB}"); // emoji preserved; text not corrupted
   });
+
+  it("redacts a secret inside a tool_use argument, preserving the structure", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okResponse([
+        { type: "text", text: "Sending it now." },
+        {
+          type: "tool_use",
+          id: "tu_1",
+          name: "send_email",
+          input: { to: "ops@corp.test", body: "the key is AKIAIOSFODNN7EXAMPLE, see attached" },
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const store = new InMemoryStore();
+    const res = await handle(
+      anthropicAdapter(cfg()),
+      { model: "claude-opus-4-8", messages: [{ role: "user", content: "send the key" }] },
+      store,
+      cfg(),
+    );
+    expect(res.status).toBe(200);
+    const tu = (res.body as any).content[1];
+    expect(tu.type).toBe("tool_use"); // object structure intact
+    expect(tu.input.to).toBe("ops@corp.test"); // non-secret leaf untouched
+    expect(tu.input.body).toContain("[REDACTED:aws_access_key]");
+    expect(tu.input.body).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    expect(res.headers?.["x-promptward-redacted"]).toContain("aws_access_key");
+  });
 });

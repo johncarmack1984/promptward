@@ -43,6 +43,19 @@ function outputParts(raw: any): ScanPart[] {
     if (typeof content === "string") {
       parts.push({ source: "ModelOutput", text: content, path: ["choices", i, "message", "content"] });
     }
+    // Tool-call arguments are a JSON string; scan it for exfiltration. Redacting
+    // a secret inside a quoted value keeps the surrounding JSON valid (the
+    // placeholder contains no quote or backslash).
+    (ch?.message?.tool_calls ?? []).forEach((tc: any, j: number) => {
+      const args = tc?.function?.arguments;
+      if (typeof args === "string" && args.length > 0) {
+        parts.push({
+          source: "ModelOutput",
+          text: args,
+          path: ["choices", i, "message", "tool_calls", j, "function", "arguments"],
+        });
+      }
+    });
   });
   return parts;
 }

@@ -3,7 +3,7 @@
 // (after any inbound redaction) rather than reconstruct it through the SDK.
 import type { Config } from "../config.js";
 import type { ProviderAdapter, ProviderResult, ScanPart, WireResponse } from "../pipeline.js";
-import { applyRedactions, textParts } from "./shared.js";
+import { applyRedactions, stringLeafParts, textParts } from "./shared.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -53,6 +53,10 @@ function outputParts(raw: any): ScanPart[] {
   (raw?.content ?? []).forEach((b: any, i: number) => {
     if (b?.type === "text" && typeof b.text === "string") {
       parts.push({ source: "ModelOutput", text: b.text, path: ["content", i, "text"] });
+    } else if (b?.type === "tool_use" && b.input && typeof b.input === "object") {
+      // Exfiltration can ride out inside a tool-call argument; scan every string
+      // leaf of the structured input and redact it in place if needed.
+      parts.push(...stringLeafParts(b.input, "ModelOutput", ["content", i, "input"]));
     }
   });
   return parts;
