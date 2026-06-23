@@ -1,0 +1,149 @@
+/*
+ * promptward console -- design tokens.
+ *
+ * Direction: a dense security/observability surface, not an admin template.
+ * Cold steel neutrals (slate-blue, never pure black), one reserved alert-red
+ * for block/critical, amber for redact/medium, a calm cyan-green for clean.
+ * Severity is the ONLY thing allowed to use saturated color, so attention goes
+ * where risk is. Monospace for every number and identifier. Hairline 1px rules
+ * separate data; cards are avoided. Dark-locked, single theme.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces -- cool near-black with a blue cast, layered by 1 step. */
+  --bg: #0a0d12;
+  --surface-0: #0c1016;
+  --surface-1: #10151d;
+  --surface-2: #151b25;
+  --surface-3: #1b2330;
+  --hover: #141a24;
+
+  /* Hairlines and structure. */
+  --line: #1e2733;
+  --line-strong: #2a3645;
+  --line-faint: #161d27;
+
+  /* Text ramp. */
+  --text: #e6edf5;
+  --text-dim: #9fb0c3;
+  --text-mute: #647488;
+  --text-faint: #44505f;
+
+  /* Severity ramp -- the deliberate palette. */
+  --crit: #ff5c5c;
+  --crit-bg: rgba(255, 92, 92, 0.12);
+  --crit-line: rgba(255, 92, 92, 0.36);
+
+  --high: #ff8f4d;
+  --high-bg: rgba(255, 143, 77, 0.11);
+  --high-line: rgba(255, 143, 77, 0.32);
+
+  --med: #f0bf3f;
+  --med-bg: rgba(240, 191, 63, 0.1);
+  --med-line: rgba(240, 191, 63, 0.3);
+
+  --low: #6f8aa6;
+  --low-bg: rgba(111, 138, 166, 0.12);
+  --low-line: rgba(111, 138, 166, 0.3);
+
+  --info: #5c6b7e;
+  --info-bg: rgba(92, 107, 126, 0.12);
+  --info-line: rgba(92, 107, 126, 0.28);
+
+  /* Actions reuse the severity language deliberately. */
+  --allow: #4ec9a8;
+  --allow-bg: rgba(78, 201, 168, 0.1);
+  --allow-line: rgba(78, 201, 168, 0.28);
+
+  /* Kind accents -- distinct hue per detection class, low saturation. */
+  --kind-injection: #e0746a;
+  --kind-exfiltration: #c98bd6;
+  --kind-obfuscation: #5ab0c4;
+
+  /* The single non-severity accent: a muted cyan for "good news" headline. */
+  --accent: #4ec9a8;
+
+  --radius: 4px;
+  --mono: "SFMono-Regular", "JetBrains Mono", "Roboto Mono", ui-monospace,
+    "Menlo", "Consolas", monospace;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    sans-serif;
+
+  --z-header: 40;
+  --z-row-expand: 1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Faint grid texture, fixed and non-interactive -- no scroll repaint cost. */
+  background-image:
+    linear-gradient(var(--line-faint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-faint) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: -1px -1px;
+  background-attachment: fixed;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(78, 201, 168, 0.25);
+}
+
+/* Tabular numerals everywhere numbers live. */
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thin custom scrollbars to match the dense aesthetic. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

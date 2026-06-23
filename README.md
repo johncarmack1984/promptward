@@ -63,8 +63,8 @@ The detection core runs a fixed, deterministic pipeline: NFKC-normalize and reve
 
 - **tripwire-core** (`crates/tripwire-core`, Rust) -- the hot-path scanners: normalization + smuggling detection, decode-then-rescan, injection (source-aware) and exfiltration (secrets/PII/markdown). 32 unit tests; exposed to TypeScript via a napi addon (`@promptward/tripwire`), which generates the TS types. **Done.**
 - **evals** (`evals/`) -- runs the detectors over the labeled corpus and reports the numbers above; deterministic and re-runnable. **Done.**
-- **gateway** (`apps/gateway`) -- the proxy: policy, provider calls, schema validation, cost metering, event store. _In progress._
-- **dashboard** (`apps/dashboard`) -- request log, findings, and cost at a glance. _In progress._
+- **gateway** (`apps/gateway`, TypeScript / Hono) -- the proxy: inbound and outbound scan, policy (allow / redact / block), wire-compatible provider passthrough, structured-output validation with bounded retry, and per-request cost metering, recording every request to the event store. Anthropic (`/v1/messages`) and OpenAI (`/v1/chat/completions`) routes; in-memory store by default, Postgres optional. **Done.**
+- **dashboard** (`apps/dashboard`, React / Vite) -- the console: a dense, dark, severity-coded surface. Three views -- Detection (the measured eval proof), Requests (live log with expandable inbound/outbound findings, fixture fallback when the gateway is down), and Cost (spend and policy-outcome breakdown). **Done.**
 
 ## Quickstart
 
@@ -72,14 +72,21 @@ The detection core runs a fixed, deterministic pipeline: NFKC-normalize and reve
 pnpm install
 pnpm core:build      # build the Rust detection core (napi addon)
 pnpm eval            # run the detectors over the corpus -> the table above
+pnpm gateway         # start the proxy (in-memory store; no setup required)
 ```
 
-Then, as they land:
+### Use it as a proxy
 
-```bash
-pnpm gateway         # start the proxy
-pnpm dashboard       # start the dashboard
+Point your SDK's `baseURL` at the gateway -- it stays wire-compatible:
+
+```python
+# Anthropic
+client = Anthropic(base_url="http://localhost:8787")
+# OpenAI
+client = OpenAI(base_url="http://localhost:8787/v1")
 ```
+
+Every call is scanned inbound and outbound: prompt injection is blocked, secrets and PII are redacted (and surfaced in an `x-promptward-redacted` header), structured output is validated against your JSON Schema with bounded retry, and tokens + cost are recorded. Set `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` to proxy real calls (see `.env.example`).
 
 ## License
 
