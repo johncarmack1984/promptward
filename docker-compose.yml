@@ -1,0 +1,17 @@
+# Optional Postgres event store for the gateway. The gateway defaults to an
+# in-memory store; set DATABASE_URL (see .env.example) to use this instead.
+#   docker compose up -d postgres
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: promptward
+      POSTGRES_PASSWORD: promptward
+      POSTGRES_DB: promptward
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
