@@ -2,15 +2,26 @@
 name = "tripwire-core"
 version = "0.0.0"
 edition = "2021"
-description = "Fast detection core for promptward: prompt-injection heuristics + secret/PII exfiltration scanning."
+description = "Fast detection core for promptward: prompt-injection heuristics + secret/PII exfiltration scanning + unicode-smuggling/decode passes."
 license = "MIT"
 
-# Detection runs on the request hot path, so the scanners live in Rust.
-# Integration with the TS gateway is an open decision (napi-rs | wasm | sidecar) -- see docs/SPEC.md.
-
+# Pure scanner logic builds as an rlib and is unit-tested by `cargo test` with no
+# Node dependency. The `node` feature pulls in napi-rs and compiles the cdylib
+# addon (built via @napi-rs/cli -> @promptward/tripwire). Keep the hot path lean.
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = []
+node = ["dep:napi", "dep:napi-derive"]
+
 [dependencies]
-# TODO(build): pin during implementation. Likely: aho-corasick, regex, serde, serde_json.
-# Keep this lean -- the hot path should stay allocation-light.
+aho-corasick = "1"
+regex = "1"
+once_cell = "1"
+unicode-normalization = "0.1"
+napi = { version = "3", features = ["napi9"], optional = true }
+napi-derive = { version = "3", features = ["type-def"], optional = true }
+
+[build-dependencies]
+napi-build = "2"

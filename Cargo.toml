@@ -1,0 +1,5 @@
+# Cargo workspace root. The detection core lives in crates/tripwire-core and is
+# also published to the pnpm workspace as the napi package @promptward/tripwire.
+[workspace]
+members = ["crates/tripwire-core"]
+resolver = "2"

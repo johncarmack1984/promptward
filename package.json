@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "description": "LLM gateway that detects prompt injection and data exfiltration, validates structured output, and tracks cost -- with an eval harness that proves the detection rate.",
   "license": "MIT",
-  "packageManager": "pnpm@9",
+  "packageManager": "pnpm@10.30.3",
   "scripts": {
     "gateway": "pnpm --filter @promptward/gateway dev",
     "dashboard": "pnpm --filter @promptward/dashboard dev",
     "eval": "pnpm --filter @promptward/evals run",
-    "core:build": "cargo build --release --manifest-path crates/tripwire-core/Cargo.toml"
+    "core:build": "pnpm --filter @promptward/tripwire build",
+    "core:build:debug": "pnpm --filter @promptward/tripwire build:debug"
   }
 }

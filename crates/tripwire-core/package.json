@@ -1,0 +1,29 @@
+{
+  "name": "@promptward/tripwire",
+  "version": "0.0.0",
+  "private": true,
+  "description": "napi binding for tripwire-core: the promptward detection hot path (injection + exfiltration + smuggling).",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "binaryName": "tripwire",
+    "targets": [
+      "aarch64-apple-darwin",
+      "x86_64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu"
+    ]
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "*.node"
+  ],
+  "scripts": {
+    "build": "napi build --platform --release --features node",
+    "build:debug": "napi build --platform --features node"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "3.7.2"
+  }
+}
