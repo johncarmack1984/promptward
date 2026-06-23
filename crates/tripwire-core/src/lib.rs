@@ -1,15 +1,20 @@
 //! tripwire-core: detection on the request hot path.
 //!
-//! Two cheap, deterministic scanner families run before any model call:
-//!   - injection: source-aware heuristics for prompt-injection / jailbreak /
-//!     indirect-injection / tool-and-MCP-description poisoning.
-//!   - exfiltration: secrets + PII (regex + entropy) and markdown/link exfil.
-//! A normalization + smuggling pass and a decode-then-rescan pass run first so
-//! invisible-unicode and encoded payloads become visible to the rest.
+//! `scan` runs a fixed, deterministic pipeline reflecting the current (2026)
+//! attack surface, not 2024 keyword matching:
+//!   1. normalize + smuggling detection (NFKC; reveal unicode-tag/zero-width/bidi)
+//!   2. injection scan (source-aware) on the normalized text
+//!   3. exfiltration scan (secrets/PII/markdown-exfil) on the normalized text
+//!   4. decode-then-rescan (base64/hex/url/rot13) of any encoded payloads
+//! Spans are mapped back to byte offsets in the ORIGINAL text for redaction.
 //!
-//! Everything here is pure, deterministic, and allocation-light -- it sits in
-//! front of every call. The optional LLM-judge lives in the gateway, not here.
+//! Everything here is pure, deterministic, and allocation-light. The optional
+//! LLM-judge lives in the gateway, not here.
 
+mod decode;
+mod exfil;
+mod injection;
+mod normalize;
 mod types;
 
 pub use types::{Direction, Finding, Kind, Severity, Source};
@@ -19,12 +24,37 @@ pub use types::{Direction, Finding, Kind, Severity, Source};
 mod node;
 
 /// Scan a chunk of text and return findings. Pure, deterministic, no I/O.
-///
-/// T1 ships the type contract and binding with a trivial empty result; the
-/// normalization, decode, injection, and exfiltration passes land in T3-T5,
-/// driven by the labeled corpus (see docs/SPEC.md section 5).
-pub fn scan(_text: &str, _direction: Direction, _source: Source) -> Vec<Finding> {
-    Vec::new()
+pub fn scan(text: &str, direction: Direction, source: Source) -> Vec<Finding> {
+    let norm = normalize::analyze(text);
+    let mut findings: Vec<Finding> = norm.findings.clone();
+
+    // Primary scan on the de-smuggled, normalized text; map spans back to original.
+    for f in injection::scan(&norm.text, direction, source) {
+        findings.push(norm.remap(f));
+    }
+    for f in exfil::scan(&norm.text, direction, source) {
+        findings.push(norm.remap(f));
+    }
+
+    // Decode-then-rescan: unwrap encoded payloads and scan them, attributing any
+    // finding to the encoded region's span in the original text.
+    for seg in decode::candidates(&norm.text) {
+        let start = norm.to_original(seg.start) as u32;
+        let end = norm.to_original(seg.end) as u32;
+        let mut sub = injection::scan(&seg.text, direction, source);
+        sub.extend(exfil::scan(&seg.text, direction, source));
+        for mut f in sub {
+            f.start = start;
+            f.end = end;
+            f.detail = Some(match f.detail {
+                Some(d) => format!("decoded:{}; {d}", seg.kind),
+                None => format!("decoded:{}", seg.kind),
+            });
+            findings.push(f);
+        }
+    }
+
+    findings
 }
 
 #[cfg(test)]
@@ -32,9 +62,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn scan_returns_empty_for_now() {
-        let findings = scan("hello world", Direction::Inbound, Source::User);
+    fn scan_is_clean_on_benign_text() {
+        let findings = scan(
+            "Summarize this quarterly report in three bullets.",
+            Direction::Inbound,
+            Source::User,
+        );
         assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn scan_flags_unicode_smuggling_as_obfuscation() {
+        // Zero-width split keyword: the smuggling pass should flag it even before
+        // the injection scanner (T4) lands.
+        let findings = scan("ig\u{200b}nore previous", Direction::Inbound, Source::User);
+        assert!(findings
+            .iter()
+            .any(|f| f.kind == Kind::Obfuscation && f.label == "zero_width"));
     }
 
     #[test]
