@@ -11,6 +11,7 @@
  */
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { pathToFileURL } from "node:url";
 import { loadConfig, type Config } from "./config.js";
 import { makeStore, type EventStore } from "./store.js";
@@ -49,8 +50,16 @@ export async function createApp(config: Config = loadConfig()): Promise<App> {
         headers: { "content-type": "application/json", ...(res.headers ?? {}) },
       });
     };
-  app.post("/v1/messages", proxy(anthropicAdapter)); // Anthropic
-  app.post("/v1/chat/completions", proxy(openaiAdapter)); // OpenAI
+  // Defense-in-depth: cap the raw request body before it is parsed, so a
+  // pathologically large payload cannot exhaust memory ahead of the per-request
+  // scan cap (config.maxScanBytes) enforced in the pipeline.
+  const limit = bodyLimit({
+    maxSize: config.maxScanBytes * 8,
+    onError: (c) =>
+      c.json({ error: { type: "promptward_policy_error", message: "request body too large" } }, 413),
+  });
+  app.post("/v1/messages", limit, proxy(anthropicAdapter)); // Anthropic
+  app.post("/v1/chat/completions", limit, proxy(openaiAdapter)); // OpenAI
 
   return { app, store, config };
 }

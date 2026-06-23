@@ -45,6 +45,8 @@ export interface RedactedPart {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ProviderAdapter {
   name: Provider;
+  /** Whether the caller asked for a streaming response (stream: true). */
+  wantsStreaming(body: any): boolean;
   /** Every scannable inbound part with its TRUE source -- system prompt, every
    *  user turn, tool results, and tool/MCP descriptions, not just the last turn. */
   inputParts(body: any): ScanPart[];
@@ -128,10 +130,18 @@ export async function handle(
   let inPolicy: PolicyOutcome;
   let reqBody: unknown;
   try {
-    const scanned = adapter.inputParts(body).map((part) => ({
-      part,
-      findings: scan(part.text, "Inbound", part.source),
-    }));
+    const parts = adapter.inputParts(body);
+    // Bound synchronous scan work: reject oversized input rather than block the
+    // event loop scanning it (a real availability lever for an inline proxy).
+    const totalBytes = parts.reduce((n, p) => n + Buffer.byteLength(p.text, "utf8"), 0);
+    if (totalBytes > config.maxScanBytes) {
+      await record({ action: "block", blocked: true, error: `request too large to scan: ${totalBytes} > ${config.maxScanBytes} bytes` });
+      return adapter.errorResponse(
+        413,
+        `request too large: ${totalBytes} bytes of scannable text exceeds the ${config.maxScanBytes}-byte limit`,
+      );
+    }
+    const scanned = parts.map((part) => ({ part, findings: scan(part.text, "Inbound", part.source) }));
     inbound = scanned.flatMap((s) => s.findings);
     inPolicy = decide(inbound, config.threshold);
     if (inPolicy.action === "block") {
@@ -145,6 +155,17 @@ export async function handle(
   } catch (e) {
     await record({ action: "block", blocked: true, error: `inbound scan failed (fail-closed): ${(e as Error).message}` });
     return adapter.errorResponse(502, "promptward scan error; request not forwarded (fail-closed)");
+  }
+
+  // A streaming response can't be scanned outbound without buffering the whole
+  // SSE stream, so reject it cleanly (still scanned inbound above) rather than
+  // forward it unscanned or 502 on a JSON parse of an event stream.
+  if (adapter.wantsStreaming(body)) {
+    await record({ action: inPolicy.action, inboundFindings: inbound, error: "streaming not supported" });
+    return adapter.errorResponse(
+      400,
+      "streaming (stream: true) is not supported yet; omit stream or set it to false",
+    );
   }
 
   // 2. Provider call + structured-output validation with bounded retry.
