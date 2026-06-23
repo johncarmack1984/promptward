@@ -1,0 +1,50 @@
+# Dependabot version updates. Security updates (the alerts) are a separate repo
+# setting and stay on; this keeps dependencies current and groups routine bumps
+# into a few PRs instead of one per package.
+version: 2
+updates:
+  # JavaScript / TypeScript -- the pnpm workspace (gateway, dashboard, evals, and
+  # the napi package). Globs cover apps/* and crates/*; the root has no deps.
+  - package-ecosystem: "npm"
+    directories:
+      - "/apps/*"
+      - "/evals"
+      - "/crates/*"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+      production-dependencies:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+
+  # Rust detection core (Cargo workspace at the repo root).
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      cargo:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: "deps"
+
+  # GitHub Actions -- keep the SHA-pinned actions in ci.yml current (Dependabot
+  # bumps the pin and its version comment together).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
