@@ -236,6 +236,19 @@ function main(): void {
     console.log(`  ${name.padEnd(26)} ${kind} ${pct(b.rate).padStart(6)}%  (${b.detected}/${b.count})`);
   }
   console.log("\nWrote evals/results.json");
+
+  // CI gate: fail if detection regresses below pinned floors (overridable).
+  const minF1 = Number(process.env.PROMPTWARD_MIN_F1 ?? 0.9);
+  const minRecall1 = Number(process.env.PROMPTWARD_MIN_RECALL_1PCT ?? 0.9);
+  if (overall.f1 < minF1 || ra.recall < minRecall1) {
+    console.error(
+      `\nFAIL: overall F1 ${pct(overall.f1)}% (floor ${pct(minF1)}%) or Recall@1%FPR ${pct(ra.recall)}% (floor ${pct(minRecall1)}%) below threshold`,
+    );
+    process.exit(1);
+  }
+  console.log(
+    `PASS: F1 ${pct(overall.f1)}% >= ${pct(minF1)}%, Recall@1%FPR ${pct(ra.recall)}% >= ${pct(minRecall1)}%`,
+  );
 }
 
 main();
