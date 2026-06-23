@@ -96,4 +96,18 @@ describe("openai adapter", () => {
     const parsed = JSON.parse(out); // redaction kept the JSON valid
     expect(parsed.to).toBe("ops@corp.test");
   });
+
+  it("forwards the caller's Authorization, else falls back to the server key", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse("hi"));
+    vi.stubGlobal("fetch", fetchMock);
+    const config = loadConfig({ OPENAI_API_KEY: "server-key" } as NodeJS.ProcessEnv);
+    const body = { model: "gpt-test", messages: [{ role: "user", content: "hi" }] };
+
+    await handle(openaiAdapter(config), body, new InMemoryStore(), config, { auth: "Bearer sk-caller" });
+    expect((fetchMock.mock.calls[0][1] as any).headers.authorization).toBe("Bearer sk-caller");
+
+    fetchMock.mockClear();
+    await handle(openaiAdapter(config), body, new InMemoryStore(), config);
+    expect((fetchMock.mock.calls[0][1] as any).headers.authorization).toBe("Bearer server-key");
+  });
 });

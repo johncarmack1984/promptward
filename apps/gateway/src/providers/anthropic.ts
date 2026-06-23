@@ -73,12 +73,13 @@ export function anthropicAdapter(config: Config): ProviderAdapter {
       ...body,
       system: [body?.system, correction].filter(Boolean).join("\n\n"),
     }),
-    async call(body): Promise<ProviderResult> {
+    async call(body, auth): Promise<ProviderResult> {
       const res = await fetch(`${config.anthropicBaseUrl}/v1/messages`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-api-key": config.anthropicApiKey ?? "",
+          // Forward the caller's key; fall back to the server's configured key.
+          "x-api-key": auth ?? config.anthropicApiKey ?? "",
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify(body),

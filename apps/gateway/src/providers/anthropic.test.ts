@@ -144,4 +144,18 @@ describe("anthropic adapter -- source-aware scan + redaction", () => {
     expect(tu.input.body).not.toContain("AKIAIOSFODNN7EXAMPLE");
     expect(res.headers?.["x-promptward-redacted"]).toContain("aws_access_key");
   });
+
+  it("forwards the caller's x-api-key, else falls back to the server key", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse([{ type: "text", text: "hi" }]));
+    vi.stubGlobal("fetch", fetchMock);
+    const config = loadConfig({ ANTHROPIC_API_KEY: "server-key" } as NodeJS.ProcessEnv);
+    const body = { model: "claude-opus-4-8", messages: [{ role: "user", content: "hi" }] };
+
+    await handle(anthropicAdapter(config), body, new InMemoryStore(), config, { auth: "sk-ant-caller" });
+    expect((fetchMock.mock.calls[0][1] as any).headers["x-api-key"]).toBe("sk-ant-caller");
+
+    fetchMock.mockClear();
+    await handle(anthropicAdapter(config), body, new InMemoryStore(), config);
+    expect((fetchMock.mock.calls[0][1] as any).headers["x-api-key"]).toBe("server-key");
+  });
 });

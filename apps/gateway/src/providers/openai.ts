@@ -72,12 +72,14 @@ export function openaiAdapter(config: Config): ProviderAdapter {
       ...body,
       messages: [...(body?.messages ?? []), { role: "system", content: correction }],
     }),
-    async call(body): Promise<ProviderResult> {
+    async call(body, auth): Promise<ProviderResult> {
       const res = await fetch(`${config.openaiBaseUrl}/chat/completions`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          authorization: `Bearer ${config.openaiApiKey ?? ""}`,
+          // Forward the caller's Authorization (already "Bearer ..."); fall back
+          // to the server's configured key.
+          authorization: auth ?? `Bearer ${config.openaiApiKey ?? ""}`,
         },
         body: JSON.stringify(body),
       });

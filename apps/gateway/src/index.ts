@@ -41,10 +41,16 @@ export async function createApp(config: Config = loadConfig()): Promise<App> {
   });
 
   // Wire-compatible proxy routes. Same pipeline; the adapter handles the shape.
-  const proxy = (adapter: (cfg: Config) => ReturnType<typeof anthropicAdapter>) =>
-    async (c: { req: { json: () => Promise<unknown> } }) => {
+  const proxy =
+    (adapter: (cfg: Config) => ReturnType<typeof anthropicAdapter>, authHeader: string) =>
+    async (c: {
+      req: { json: () => Promise<unknown>; header: (n: string) => string | undefined };
+    }) => {
       const body: unknown = await c.req.json();
-      const res = await handle(adapter(config), body, store, config);
+      // Forward the caller's credential to the provider (true drop-in); the
+      // gateway falls back to its configured key only when none is sent.
+      const auth = c.req.header(authHeader) || undefined;
+      const res = await handle(adapter(config), body, store, config, { auth });
       return new Response(JSON.stringify(res.body), {
         status: res.status,
         headers: { "content-type": "application/json", ...(res.headers ?? {}) },
@@ -58,8 +64,8 @@ export async function createApp(config: Config = loadConfig()): Promise<App> {
     onError: (c) =>
       c.json({ error: { type: "promptward_policy_error", message: "request body too large" } }, 413),
   });
-  app.post("/v1/messages", limit, proxy(anthropicAdapter)); // Anthropic
-  app.post("/v1/chat/completions", limit, proxy(openaiAdapter)); // OpenAI
+  app.post("/v1/messages", limit, proxy(anthropicAdapter, "x-api-key")); // Anthropic
+  app.post("/v1/chat/completions", limit, proxy(openaiAdapter, "authorization")); // OpenAI
 
   return { app, store, config };
 }

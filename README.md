@@ -94,7 +94,7 @@ client = Anthropic(base_url="http://localhost:8787")
 client = OpenAI(base_url="http://localhost:8787/v1")
 ```
 
-Every call is scanned inbound and outbound: prompt injection is blocked, secrets and PII are redacted (and surfaced in an `x-promptward-redacted` header), structured output is validated against your JSON Schema with bounded retry, and tokens + cost are recorded. Set `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` to proxy real calls (see `.env.example`).
+Every call is scanned inbound and outbound: prompt injection is blocked, secrets and PII are redacted (and surfaced in an `x-promptward-redacted` header), structured output is validated against your JSON Schema with bounded retry, and tokens + cost are recorded. Your SDK's own API key is forwarded to the provider, so changing `baseURL` is all you need; `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` are an optional fallback for callers that send none (see `.env.example`).
 
 ## Roadmap
 
