@@ -2,41 +2,43 @@
 // incoming body IS the Anthropic /v1/messages body -- we forward it as-is
 // (after any inbound redaction) rather than reconstruct it through the SDK.
 import type { Config } from "../config.js";
-import type { ProviderAdapter, ProviderResult, WireResponse } from "../pipeline.js";
+import type { ProviderAdapter, ProviderResult, ScanPart, WireResponse } from "../pipeline.js";
+import { applyRedactions, textParts } from "./shared.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-function blockText(content: any): string {
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) {
-    return content
-      .filter((b) => b?.type === "text")
-      .map((b) => b.text as string)
-      .join("\n");
-  }
-  return "";
-}
+// Every scannable inbound part: the system prompt, each user turn's text, the
+// contents of tool_result blocks (tagged Tool), and tool/MCP descriptions --
+// the surfaces where 2026 indirect injection and tool poisoning actually land.
+// Assistant turns are prior model output and are not re-scanned inbound.
+function inputParts(body: any): ScanPart[] {
+  const parts: ScanPart[] = [];
+  if (body?.system != null) parts.push(...textParts(body.system, "System", ["system"]));
 
-function lastUserText(body: any): string {
   const msgs = Array.isArray(body?.messages) ? body.messages : [];
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    if (msgs[i]?.role === "user") return blockText(msgs[i].content);
-  }
-  return "";
-}
-
-function replaceLastUserText(body: any, text: string): any {
-  const clone = structuredClone(body);
-  const msgs = clone.messages ?? [];
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    if (msgs[i]?.role === "user") {
-      msgs[i].content = text;
-      break;
+  msgs.forEach((m: any, i: number) => {
+    if (m?.role !== "user") return;
+    const base = ["messages", i, "content"];
+    parts.push(...textParts(m.content, "User", base));
+    if (Array.isArray(m.content)) {
+      m.content.forEach((b: any, j: number) => {
+        if (b?.type === "tool_result") {
+          parts.push(...textParts(b.content, "Tool", [...base, j, "content"]));
+        }
+      });
     }
-  }
-  return clone;
+  });
+
+  const tools = Array.isArray(body?.tools) ? body.tools : [];
+  tools.forEach((t: any, i: number) => {
+    if (typeof t?.description === "string") {
+      parts.push({ source: "McpDescription", text: t.description, path: ["tools", i, "description"] });
+    }
+  });
+  return parts;
 }
 
+// Joined text of the response (for structured-output validation).
 function responseText(raw: any): string {
   return (raw?.content ?? [])
     .filter((b: any) => b?.type === "text")
@@ -44,24 +46,24 @@ function responseText(raw: any): string {
     .join("");
 }
 
-function rewriteResponseText(raw: any, text: string): any {
-  const clone = structuredClone(raw);
-  let replaced = false;
-  for (const b of clone.content ?? []) {
-    if (b?.type === "text") {
-      b.text = replaced ? "" : text;
-      replaced = true;
+// Each outbound text block, addressable for in-place redaction (no block is
+// blanked or collapsed).
+function outputParts(raw: any): ScanPart[] {
+  const parts: ScanPart[] = [];
+  (raw?.content ?? []).forEach((b: any, i: number) => {
+    if (b?.type === "text" && typeof b.text === "string") {
+      parts.push({ source: "ModelOutput", text: b.text, path: ["content", i, "text"] });
     }
-  }
-  return clone;
+  });
+  return parts;
 }
 
 export function anthropicAdapter(config: Config): ProviderAdapter {
   return {
     name: "anthropic",
-    inputText: (body) => lastUserText(body),
+    inputParts,
     schema: (body) => body?.response_format?.json_schema?.schema ?? body?.promptward?.schema ?? null,
-    redactInput: (body, redactedText) => replaceLastUserText(body, redactedText),
+    redactInput: (body, redactions) => applyRedactions(body, redactions),
     withCorrection: (body, correction) => ({
       ...body,
       system: [body?.system, correction].filter(Boolean).join("\n\n"),
@@ -86,14 +88,14 @@ export function anthropicAdapter(config: Config): ProviderAdapter {
         raw: json,
       };
     },
-    buildResponse: (raw, outboundText, redacted): WireResponse => {
-      const body = redacted.length ? rewriteResponseText(raw, outboundText) : raw;
-      return {
-        status: 200,
-        body,
-        headers: redacted.length ? { "x-promptward-redacted": redacted.join(",") } : undefined,
-      };
-    },
+    outputParts,
+    buildResponse: (raw, redactions, redactedLabels): WireResponse => ({
+      status: 200,
+      body: applyRedactions(raw, redactions),
+      headers: redactedLabels.length
+        ? { "x-promptward-redacted": redactedLabels.join(",") }
+        : undefined,
+    }),
     errorResponse: (status, message): WireResponse => ({
       status,
       body: { type: "error", error: { type: "promptward_policy_error", message } },
