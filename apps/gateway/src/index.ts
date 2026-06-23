@@ -13,6 +13,8 @@ import { Hono } from "hono";
 import { pathToFileURL } from "node:url";
 import { loadConfig, type Config } from "./config.js";
 import { makeStore, type EventStore } from "./store.js";
+import { handle } from "./pipeline.js";
+import { anthropicAdapter } from "./providers/anthropic.js";
 
 export interface App {
   app: Hono;
@@ -35,7 +37,15 @@ export async function createApp(config: Config = loadConfig()): Promise<App> {
     return c.json({ requests, stats });
   });
 
-  // Proxy routes are mounted by the pipeline module in T9/T10.
+  // Anthropic-compatible proxy. (OpenAI /v1/chat/completions lands in T10.)
+  app.post("/v1/messages", async (c) => {
+    const body: unknown = await c.req.json();
+    const res = await handle(anthropicAdapter(config), body, store, config);
+    return new Response(JSON.stringify(res.body), {
+      status: res.status,
+      headers: { "content-type": "application/json", ...(res.headers ?? {}) },
+    });
+  });
 
   return { app, store, config };
 }
