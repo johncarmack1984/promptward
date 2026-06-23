@@ -46,4 +46,26 @@ export function textParts(
   }
   return [];
 }
+
+/** Walk an arbitrary JSON value and emit a scan part for every string leaf,
+ *  pathed for in-place redaction. Used to scan structured tool-call arguments
+ *  (e.g. Anthropic tool_use.input) where a secret can hide in a nested value. */
+export function stringLeafParts(
+  value: any,
+  source: Source,
+  basePath: Array<string | number>,
+): ScanPart[] {
+  const parts: ScanPart[] = [];
+  const walk = (node: any, path: Array<string | number>): void => {
+    if (typeof node === "string") {
+      parts.push({ source, text: node, path });
+    } else if (Array.isArray(node)) {
+      node.forEach((v, i) => walk(v, [...path, i]));
+    } else if (node && typeof node === "object") {
+      for (const k of Object.keys(node)) walk(node[k], [...path, k]);
+    }
+  };
+  walk(value, basePath);
+  return parts;
+}
 /* eslint-enable @typescript-eslint/no-explicit-any */

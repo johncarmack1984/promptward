@@ -43,6 +43,19 @@ function outputParts(raw: any): ScanPart[] {
     if (typeof content === "string") {
       parts.push({ source: "ModelOutput", text: content, path: ["choices", i, "message", "content"] });
     }
+    // Tool-call arguments are a JSON string; scan it for exfiltration. Redacting
+    // a secret inside a quoted value keeps the surrounding JSON valid (the
+    // placeholder contains no quote or backslash).
+    (ch?.message?.tool_calls ?? []).forEach((tc: any, j: number) => {
+      const args = tc?.function?.arguments;
+      if (typeof args === "string" && args.length > 0) {
+        parts.push({
+          source: "ModelOutput",
+          text: args,
+          path: ["choices", i, "message", "tool_calls", j, "function", "arguments"],
+        });
+      }
+    });
   });
   return parts;
 }
@@ -59,12 +72,14 @@ export function openaiAdapter(config: Config): ProviderAdapter {
       ...body,
       messages: [...(body?.messages ?? []), { role: "system", content: correction }],
     }),
-    async call(body): Promise<ProviderResult> {
+    async call(body, auth): Promise<ProviderResult> {
       const res = await fetch(`${config.openaiBaseUrl}/chat/completions`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          authorization: `Bearer ${config.openaiApiKey ?? ""}`,
+          // Forward the caller's Authorization (already "Bearer ..."); fall back
+          // to the server's configured key.
+          authorization: auth ?? `Bearer ${config.openaiApiKey ?? ""}`,
         },
         body: JSON.stringify(body),
       });

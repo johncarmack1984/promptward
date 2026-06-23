@@ -57,4 +57,57 @@ describe("openai adapter", () => {
     expect(res.headers?.["x-promptward-redacted"]).toContain("aws_access_key");
     expect((res.body as any).choices[0].message.content).toContain("[REDACTED:aws_access_key]");
   });
+
+  it("redacts a secret inside tool_call arguments, keeping valid JSON", async () => {
+    const args = JSON.stringify({ to: "ops@corp.test", note: "key AKIAIOSFODNN7EXAMPLE" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            model: "gpt-test",
+            choices: [
+              {
+                message: {
+                  role: "assistant",
+                  content: null,
+                  tool_calls: [{ id: "c1", type: "function", function: { name: "send", arguments: args } }],
+                },
+              },
+            ],
+            usage: { prompt_tokens: 1, completion_tokens: 1 },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
+    const store = new InMemoryStore();
+    const config = loadConfig({} as NodeJS.ProcessEnv);
+    const res = await handle(
+      openaiAdapter(config),
+      { model: "gpt-test", messages: [{ role: "user", content: "send the note" }] },
+      store,
+      config,
+    );
+    expect(res.status).toBe(200);
+    const out = (res.body as any).choices[0].message.tool_calls[0].function.arguments as string;
+    expect(out).toContain("[REDACTED:aws_access_key]");
+    expect(out).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    const parsed = JSON.parse(out); // redaction kept the JSON valid
+    expect(parsed.to).toBe("ops@corp.test");
+  });
+
+  it("forwards the caller's Authorization, else falls back to the server key", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse("hi"));
+    vi.stubGlobal("fetch", fetchMock);
+    const config = loadConfig({ OPENAI_API_KEY: "server-key" } as NodeJS.ProcessEnv);
+    const body = { model: "gpt-test", messages: [{ role: "user", content: "hi" }] };
+
+    await handle(openaiAdapter(config), body, new InMemoryStore(), config, { auth: "Bearer sk-caller" });
+    expect((fetchMock.mock.calls[0][1] as any).headers.authorization).toBe("Bearer sk-caller");
+
+    fetchMock.mockClear();
+    await handle(openaiAdapter(config), body, new InMemoryStore(), config);
+    expect((fetchMock.mock.calls[0][1] as any).headers.authorization).toBe("Bearer server-key");
+  });
 });

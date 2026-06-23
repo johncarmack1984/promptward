@@ -56,8 +56,10 @@ export interface ProviderAdapter {
   redactInput(body: any, redactions: RedactedPart[]): any;
   /** Return a copy of the request with a corrective instruction appended. */
   withCorrection(body: any, correction: string): any;
-  /** Call the provider; resolves with text + token usage. Throws on failure. */
-  call(body: any): Promise<ProviderResult>;
+  /** Call the provider; resolves with text + token usage. Throws on failure.
+   *  `auth` is the caller's forwarded credential (the provider auth header
+   *  value); the adapter falls back to its configured key when it is undefined. */
+  call(body: any, auth?: string): Promise<ProviderResult>;
   /** Every scannable outbound text part of the raw response (every block, every
    *  choice) -- so multi-block / n>1 responses are scanned and redacted in full. */
   outputParts(raw: any): ScanPart[];
@@ -93,6 +95,7 @@ export async function handle(
   body: unknown,
   store: EventStore,
   config: Config,
+  opts: { auth?: string } = {},
 ): Promise<WireResponse> {
   const t0 = performance.now();
   const id = randomUUID();
@@ -175,7 +178,7 @@ export async function handle(
   let errors: string | null = null;
   for (;;) {
     try {
-      result = await adapter.call(reqBody);
+      result = await adapter.call(reqBody, opts.auth);
     } catch (e) {
       await record({ action: inPolicy.action, inboundFindings: inbound, error: `provider error: ${(e as Error).message}` });
       return adapter.errorResponse(502, "upstream provider error");

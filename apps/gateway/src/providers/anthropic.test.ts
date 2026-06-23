@@ -115,4 +115,47 @@ describe("anthropic adapter -- source-aware scan + redaction", () => {
     expect(content).toContain("[REDACTED:aws_access_key]");
     expect(content).toContain("\u{1F4DB}"); // emoji preserved; text not corrupted
   });
+
+  it("redacts a secret inside a tool_use argument, preserving the structure", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      okResponse([
+        { type: "text", text: "Sending it now." },
+        {
+          type: "tool_use",
+          id: "tu_1",
+          name: "send_email",
+          input: { to: "ops@corp.test", body: "the key is AKIAIOSFODNN7EXAMPLE, see attached" },
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const store = new InMemoryStore();
+    const res = await handle(
+      anthropicAdapter(cfg()),
+      { model: "claude-opus-4-8", messages: [{ role: "user", content: "send the key" }] },
+      store,
+      cfg(),
+    );
+    expect(res.status).toBe(200);
+    const tu = (res.body as any).content[1];
+    expect(tu.type).toBe("tool_use"); // object structure intact
+    expect(tu.input.to).toBe("ops@corp.test"); // non-secret leaf untouched
+    expect(tu.input.body).toContain("[REDACTED:aws_access_key]");
+    expect(tu.input.body).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    expect(res.headers?.["x-promptward-redacted"]).toContain("aws_access_key");
+  });
+
+  it("forwards the caller's x-api-key, else falls back to the server key", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse([{ type: "text", text: "hi" }]));
+    vi.stubGlobal("fetch", fetchMock);
+    const config = loadConfig({ ANTHROPIC_API_KEY: "server-key" } as NodeJS.ProcessEnv);
+    const body = { model: "claude-opus-4-8", messages: [{ role: "user", content: "hi" }] };
+
+    await handle(anthropicAdapter(config), body, new InMemoryStore(), config, { auth: "sk-ant-caller" });
+    expect((fetchMock.mock.calls[0][1] as any).headers["x-api-key"]).toBe("sk-ant-caller");
+
+    fetchMock.mockClear();
+    await handle(anthropicAdapter(config), body, new InMemoryStore(), config);
+    expect((fetchMock.mock.calls[0][1] as any).headers["x-api-key"]).toBe("server-key");
+  });
 });
