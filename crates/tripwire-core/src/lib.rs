@@ -14,6 +14,7 @@
 mod decode;
 mod exfil;
 mod injection;
+mod markdown;
 mod normalize;
 mod types;
 
