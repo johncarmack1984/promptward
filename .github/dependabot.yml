@@ -14,12 +14,20 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 10
     groups:
-      dev-dependencies:
+      # React and its type packages travel together so a React major lands as one
+      # buildable PR (bumping react without @types/react breaks the typecheck).
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      # Everything else batched by dependency type -- including majors -- so a scan
+      # produces a few PRs to review, not one per package.
+      development:
         dependency-type: "development"
-        update-types: ["minor", "patch"]
-      production-dependencies:
+      production:
         dependency-type: "production"
-        update-types: ["minor", "patch"]
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
@@ -33,7 +41,6 @@ updates:
     groups:
       cargo:
         patterns: ["*"]
-        update-types: ["minor", "patch"]
     commit-message:
       prefix: "deps"
 
