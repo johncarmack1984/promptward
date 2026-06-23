@@ -41,6 +41,42 @@ fn finding_for(cat: Smuggle, span: (usize, usize)) -> Finding {
     Finding::new(Kind::Obfuscation, label, sev, score, span, Source::User)
 }
 
+// Homoglyph runs are scored low on purpose: the carrier itself is not the attack
+// (benign multilingual text uses these letters), so a homoglyph alone must stay
+// below the decision threshold. Detection comes from the FOLDED text tripping the
+// injection/exfiltration scanners; this finding is provenance.
+fn homoglyph_finding(span: (usize, usize)) -> Finding {
+    Finding::new(Kind::Obfuscation, "homoglyph", Severity::Low, 0.30, span, Source::User)
+}
+
+/// Curated Latin-lookalike code points (Cyrillic + Greek) that NFKC does not fold
+/// across scripts. Folding them to ASCII reveals homoglyph-disguised keywords
+/// (e.g. a Cyrillic 'o' in "ign<o>re all previous instructions") to the
+/// downstream scanners. Curated, not exhaustive -- the full Unicode confusables
+/// set is large; this covers the letters that spell common attack words.
+fn confusable_to_ascii(c: char) -> Option<char> {
+    Some(match c {
+        // Cyrillic lowercase
+        '\u{0430}' => 'a', '\u{0435}' => 'e', '\u{043E}' => 'o', '\u{0440}' => 'p',
+        '\u{0441}' => 'c', '\u{0443}' => 'y', '\u{0445}' => 'x', '\u{0456}' => 'i',
+        '\u{0458}' => 'j', '\u{0455}' => 's', '\u{043A}' => 'k', '\u{043C}' => 'm',
+        // Cyrillic uppercase
+        '\u{0410}' => 'A', '\u{0412}' => 'B', '\u{0415}' => 'E', '\u{041A}' => 'K',
+        '\u{041C}' => 'M', '\u{041D}' => 'H', '\u{041E}' => 'O', '\u{0420}' => 'P',
+        '\u{0421}' => 'C', '\u{0422}' => 'T', '\u{0423}' => 'Y', '\u{0425}' => 'X',
+        '\u{0406}' => 'I', '\u{0408}' => 'J', '\u{0405}' => 'S',
+        // Greek lowercase
+        '\u{03BF}' => 'o', '\u{03B1}' => 'a', '\u{03B5}' => 'e', '\u{03C1}' => 'p',
+        '\u{03B9}' => 'i', '\u{03BD}' => 'v', '\u{03BA}' => 'k', '\u{03C7}' => 'x',
+        // Greek uppercase
+        '\u{0391}' => 'A', '\u{0392}' => 'B', '\u{0395}' => 'E', '\u{0397}' => 'H',
+        '\u{0399}' => 'I', '\u{039A}' => 'K', '\u{039C}' => 'M', '\u{039D}' => 'N',
+        '\u{039F}' => 'O', '\u{03A1}' => 'P', '\u{03A4}' => 'T', '\u{03A5}' => 'Y',
+        '\u{03A7}' => 'X', '\u{0396}' => 'Z',
+        _ => return None,
+    })
+}
+
 /// Result of normalizing a piece of text.
 pub struct Normalized {
     /// De-smuggled, NFKC-folded text the downstream scanners run on.
@@ -85,11 +121,17 @@ pub fn analyze(original: &str) -> Normalized {
     let mut findings = Vec::new();
     // (category, run_start_byte, run_end_byte) in the original text.
     let mut run: Option<(Smuggle, usize, usize)> = None;
+    // (run_start_byte, run_end_byte) of a contiguous homoglyph (confusable) run.
+    let mut homo_run: Option<(usize, usize)> = None;
 
     for (i, ch) in original.char_indices() {
         let c = ch as u32;
         let end = i + ch.len_utf8();
         if let Some(cat) = smuggle_of(c) {
+            // A smuggling char interrupts any homoglyph run.
+            if let Some(h) = homo_run.take() {
+                findings.push(homoglyph_finding(h));
+            }
             match run {
                 Some((rc, rs, _)) if rc == cat => run = Some((rc, rs, end)),
                 Some((rc, rs, re)) => {
@@ -108,13 +150,29 @@ pub fn analyze(original: &str) -> Normalized {
             if let Some((rc, rs, re)) = run.take() {
                 findings.push(finding_for(rc, (rs, re)));
             }
-            for nch in ch.nfkc() {
-                push_char(&mut text, &mut map, nch, i);
+            if let Some(ascii) = confusable_to_ascii(ch) {
+                // Fold the lookalike to ASCII (so scanners see the real keyword)
+                // and extend the homoglyph run.
+                homo_run = Some(match homo_run {
+                    Some((hs, _)) => (hs, end),
+                    None => (i, end),
+                });
+                push_char(&mut text, &mut map, ascii, i);
+            } else {
+                if let Some(h) = homo_run.take() {
+                    findings.push(homoglyph_finding(h));
+                }
+                for nch in ch.nfkc() {
+                    push_char(&mut text, &mut map, nch, i);
+                }
             }
         }
     }
     if let Some((rc, rs, re)) = run.take() {
         findings.push(finding_for(rc, (rs, re)));
+    }
+    if let Some(h) = homo_run.take() {
+        findings.push(homoglyph_finding(h));
     }
     map.push(original.len());
 
@@ -160,6 +218,28 @@ mod tests {
         // Full-width "ignore" -> ASCII "ignore".
         let n = analyze("\u{FF49}\u{FF47}\u{FF4E}\u{FF4F}\u{FF52}\u{FF45}");
         assert_eq!(n.text, "ignore");
+    }
+
+    #[test]
+    fn folds_cyrillic_homoglyph_and_flags_it() {
+        // "ign[o]re" with a Cyrillic 'o' (U+043E).
+        let n = analyze("ign\u{043E}re all previous");
+        assert!(n.text.starts_with("ignore all previous"), "got: {:?}", n.text);
+        assert!(n
+            .findings
+            .iter()
+            .any(|f| f.label == "homoglyph" && f.kind == Kind::Obfuscation));
+        // The carrier alone must stay below the decision threshold.
+        assert!(n.findings.iter().all(|f| f.label != "homoglyph" || f.score < 0.5));
+    }
+
+    #[test]
+    fn homoglyph_run_offsets_stay_in_bounds() {
+        let s = "ign\u{043E}r\u{0435} all";
+        let n = analyze(s);
+        for i in 0..=n.text.len() {
+            assert!(n.to_original(i) <= s.len());
+        }
     }
 
     #[test]
