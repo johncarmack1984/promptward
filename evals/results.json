@@ -35,10 +35,12 @@
       "fn": 3
     },
     "benignFalsePositiveRate": 0,
-    "recallAt1pctFpr": {
+    "recallAtZeroBenignFp": {
       "threshold": 0.36,
       "recall": 0.975,
-      "allowedFp": 0
+      "allowedFp": 0,
+      "benignN": 51,
+      "effectiveFprPct": 0
     },
     "confusion": {
       "tp": 117,
@@ -119,11 +121,16 @@
         "detected": 0,
         "rate": 0
       }
-    }
+    },
+    "caveats": [
+      "Scores are calibrated on the same labeled corpus they are measured on (no held-out split); read these as an upper bound for this corpus, not a generalization estimate.",
+      "Benign set is small (n=51); a 1% false-positive rate is not resolvable below n=100, so the operating point is reported as Recall @ 0 benign FP, not Recall @ 1% FPR.",
+      "Static corpus: a fixed dataset overstates robustness against an adaptive attacker; treat the rate as a regression signal, not a security guarantee."
+    ]
   },
   "performance": {
-    "perScanMsP50": 0.0155,
-    "perScanMsP95": 0.0281,
+    "perScanMsP50": 0.0175,
+    "perScanMsP95": 0.0315,
     "scansTimed": 855
   }
 }

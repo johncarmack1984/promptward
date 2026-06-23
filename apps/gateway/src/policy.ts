@@ -61,19 +61,30 @@ function mergeSpans(spans: Span[]): Span[] {
 /**
  * Replace the exfiltration spans with typed placeholders. The secret value is
  * never copied anywhere -- only its label and span are used.
+ *
+ * The scanner's spans are UTF-8 BYTE offsets into the original text (see the
+ * Rust core), so redaction operates on a UTF-8 Buffer, not on JS UTF-16 string
+ * indices -- otherwise any multi-byte char (emoji / CJK / accent) before a
+ * secret would drift the cut and leave part of the secret in the clear.
  */
 export function redactText(text: string, findings: Finding[]): string {
   const spans = mergeSpans(
     findings
       .filter((f) => kindOf(f) === "Exfiltration")
       .map((f) => ({ start: f.start, end: f.end, label: f.label })),
-  );
-  let out = text;
-  // Replace right-to-left so earlier offsets stay valid.
-  for (const s of spans.sort((a, b) => b.start - a.start)) {
-    if (s.start >= 0 && s.end <= out.length && s.start <= s.end) {
-      out = out.slice(0, s.start) + `[REDACTED:${s.label}]` + out.slice(s.end);
-    }
+  ).sort((a, b) => a.start - b.start);
+  if (spans.length === 0) return text;
+
+  const buf = Buffer.from(text, "utf8");
+  const out: Buffer[] = [];
+  let cursor = 0;
+  for (const s of spans) {
+    // mergeSpans already removed overlaps; skip anything out of range or behind.
+    if (s.start < cursor || s.start > s.end || s.end > buf.length) continue;
+    out.push(buf.subarray(cursor, s.start));
+    out.push(Buffer.from(`[REDACTED:${s.label}]`, "utf8"));
+    cursor = s.end;
   }
-  return out;
+  out.push(buf.subarray(cursor));
+  return Buffer.concat(out).toString("utf8");
 }

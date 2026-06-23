@@ -19,7 +19,7 @@ Measured by `pnpm eval` over a labeled corpus of 171 examples (72 injection, 48 
 | **Attack (overall)** | **100%** | **97.5%** | **98.7%** |
 
 - **Zero false positives** across all 51 benign examples -- including hard negatives written to trip naive filters: quoted attack text ("the phrase 'ignore all previous instructions'..."), security questions, code with variables named `apiKey` / `password`, git SHAs, UUIDs, and benign markdown links.
-- **Recall @ <=1% false-positive rate: 97.5%** -- the metric that matters for a runtime filter.
+- **Recall @ 0 benign false positives: 97.5%** -- recall at the strictest threshold that flags none of the 51 benign examples. The benign set is too small to resolve a 1% false-positive rate (`floor(0.01 x 51) = 0`), so this is reported honestly as the zero-FP operating point with its effective FPR (0%), not as "Recall @ 1% FPR".
 - **Overhead:** the Rust core scans in tens of microseconds (p50 ~0.02ms in the eval run), in-process via napi. The deterministic scanners make **no model calls**, so they add **$0**; the optional LLM-judge is opt-in and cached.
 
 Recall by attack class:
@@ -37,7 +37,7 @@ Recall by attack class:
 | markdown-image exfiltration | 100% (11/11) |
 | encoded exfiltration | 100% (7/7) |
 
-Methodology: pure-Rust deterministic scan (no network), decision threshold 0.5, hand-curated corpus (every secret is a documentation/fake value). Static corpora overstate robustness, so these numbers are for THIS corpus at its current size -- run `pnpm eval` to reproduce them exactly.
+Methodology: pure-Rust deterministic scan (no network), decision threshold 0.5, hand-curated corpus (every secret is a documentation/fake value), scores calibrated on the same corpus they are measured on (no held-out split). Static corpora overstate robustness, so these numbers are for THIS corpus at its current size -- run `pnpm eval` to reproduce them exactly. The full caveat list ships in `evals/results.json` under `metrics.caveats`.
 
 ## Why this exists
 

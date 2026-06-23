@@ -33,6 +33,23 @@ jobs:
       - name: Eval (gated on detection floor)
         run: pnpm eval
 
+      # Guards the "every number is from a real run" claim: the committed
+      # artifact's deterministic detection metrics must match a fresh run.
+      # Compares metrics only (not the nondeterministic perf timings).
+      - name: Detection metrics are committed and current
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const cp = require("node:child_process");
+            const fresh = JSON.parse(fs.readFileSync("evals/results.json", "utf8")).metrics;
+            const head = JSON.parse(cp.execSync("git show HEAD:evals/results.json", { encoding: "utf8" })).metrics;
+            if (JSON.stringify(fresh) !== JSON.stringify(head)) {
+              console.error("evals/results.json detection metrics are stale -- run pnpm eval and commit the result.");
+              process.exit(1);
+            }
+            console.log("detection metrics current");
+          '
+
       - name: Gateway typecheck
         run: pnpm --filter @promptward/gateway typecheck
 

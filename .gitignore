@@ -12,6 +12,9 @@ crates/tripwire-core/index.js
 crates/tripwire-core/index.d.ts
 crates/tripwire-core/browser.js
 
+# generated: dashboard's copy of the eval artifact (synced from evals/results.json)
+apps/dashboard/src/data/results.json
+
 # env / secrets
 .env
 .env.*

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { handle, type ProviderAdapter, type ProviderResult } from "./pipeline.js";
+import { handle, type ProviderAdapter, type ProviderResult, type ScanPart } from "./pipeline.js";
+import { applyRedactions } from "./providers/shared.js";
 import { InMemoryStore } from "./store.js";
 import { loadConfig, type Config } from "./config.js";
 
@@ -27,21 +28,35 @@ function mock(opts: { responses: ProviderResult[]; schema?: object | null }) {
   const calls: any[] = [];
   const adapter: ProviderAdapter = {
     name: "anthropic",
-    inputText: (b) => {
-      const m = b.messages?.[b.messages.length - 1];
-      return typeof m?.content === "string" ? m.content : "";
+    inputParts: (b) => {
+      const parts: ScanPart[] = [];
+      (b.messages ?? []).forEach((m: any, idx: number) => {
+        if (m?.role === "user" && typeof m.content === "string") {
+          parts.push({ source: "User", text: m.content, path: ["messages", idx, "content"] });
+        }
+      });
+      return parts;
     },
     schema: () => opts.schema ?? null,
-    redactInput: (b, t) => ({ ...b, messages: [...b.messages.slice(0, -1), { role: "user", content: t }] }),
+    redactInput: (b, redactions) => applyRedactions(b, redactions),
     withCorrection: (b, c) => ({ ...b, system: [b.system, c].filter(Boolean).join("\n") }),
     call: async (b) => {
       calls.push(b);
       return opts.responses[Math.min(i++, opts.responses.length - 1)];
     },
-    buildResponse: (raw, outText, redacted) => ({
+    outputParts: (raw) => {
+      const parts: ScanPart[] = [];
+      ((raw as any)?.content ?? []).forEach((bl: any, idx: number) => {
+        if (bl?.type === "text") {
+          parts.push({ source: "ModelOutput", text: bl.text, path: ["content", idx, "text"] });
+        }
+      });
+      return parts;
+    },
+    buildResponse: (raw, redactions, labels) => ({
       status: 200,
-      body: { content: [{ type: "text", text: outText }], model: (raw as any)?.model },
-      headers: redacted.length ? { "x-promptward-redacted": redacted.join(",") } : undefined,
+      body: applyRedactions(raw, redactions),
+      headers: labels.length ? { "x-promptward-redacted": labels.join(",") } : undefined,
     }),
     errorResponse: (status, message) => ({ status, body: { type: "error", error: { message } } }),
   };
@@ -131,5 +146,22 @@ describe("gateway pipeline", () => {
     const text = (res.body as any).content[0].text as string;
     expect(text).toContain("[REDACTED:aws_access_key]");
     expect(text).not.toContain("AKIAIOSFODNN7EXAMPLE");
+  });
+
+  it("fails closed when the scanner throws (never forwards the request)", async () => {
+    const store = new InMemoryStore();
+    const { adapter, calls } = mock({ responses: [R("ok")] });
+    const boom: ProviderAdapter = {
+      ...adapter,
+      inputParts: () => {
+        throw new Error("scanner exploded");
+      },
+    };
+    const res = await handle(boom, userBody("hello"), store, cfg());
+    expect(res.status).toBe(502);
+    expect(calls).toHaveLength(0); // provider never called
+    const [rec] = await store.list();
+    expect(rec.blocked).toBe(true);
+    expect(rec.error).toMatch(/fail-closed/);
   });
 });

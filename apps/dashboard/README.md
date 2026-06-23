@@ -2,7 +2,7 @@
 
 The promptward console: a dense, dark security surface for the gateway. Three views.
 
-- **Detection** -- the headline. Renders the measured eval artifact (`src/data/results.json`, copied from `evals/results.json`): overall precision / recall / F1, the zero-false-positive story, Recall at <=1% FPR, the confusion matrix, and per-bucket recall. Numbers come from a real `pnpm eval` run, never hand-written.
+- **Detection** -- the headline. Renders the measured eval artifact: overall precision / recall / F1, the zero-false-positive story, Recall at 0 benign FP, the confusion matrix, and per-bucket recall. The artifact is synced verbatim from canonical `evals/results.json` by `scripts/sync-results.mjs` (run automatically before dev / build / typecheck) into the gitignored `src/data/results.json` -- one source of truth, so the console can never drift from the numbers `pnpm eval` produced. Never hand-written.
 - **Requests** -- the live request log. Fetches `GET /v1/requests?limit=100` from the gateway; if it is not running, falls back to a bundled sample fixture so the view always renders. Each row shows time, provider, model, an action badge (allow / redact / block), finding count, cost (or `unpriced`), and latency. Expand a row for inbound and outbound findings with severity, kind, label, score, and byte span.
 - **Cost** -- request count, total spend, blocked count, finding count, plus policy-outcome distribution and spend by model.
 

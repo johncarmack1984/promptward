@@ -26,7 +26,14 @@ static SIGS: Lazy<Vec<Sig>> = Lazy::new(|| {
     vec![
         Sig { re: Regex::new(r"AKIA[0-9A-Z]{16}").unwrap(), label: "aws_access_key", score: 0.95, sev: Severity::Critical },
         Sig { re: Regex::new(r"gh[pousr]_[A-Za-z0-9]{20,}").unwrap(), label: "github_token", score: 0.95, sev: Severity::Critical },
-        Sig { re: Regex::new(r"sk-(?:ant-)?[A-Za-z0-9_-]{16,}").unwrap(), label: "llm_api_key", score: 0.95, sev: Severity::Critical },
+        // OpenAI/Anthropic keys. Two shapes, both requiring a long high-entropy
+        // body so hyphenated identifiers ("sk-learn-classifier-module") do not
+        // match: (1) the structured prefixes sk-ant-api03-/sk-proj- whose base64url
+        // body may contain - and _, (2) a bare sk- (optionally sk-ant-) followed by
+        // a 20+ contiguous alphanumeric run. The old `[A-Za-z0-9_-]{16,}` body let
+        // short hyphen-joined words through.
+        Sig { re: Regex::new(r"sk-(?:ant-api\d\d|proj)-[A-Za-z0-9_\-]{20,}").unwrap(), label: "llm_api_key", score: 0.95, sev: Severity::Critical },
+        Sig { re: Regex::new(r"sk-(?:ant-)?[A-Za-z0-9]{20,}").unwrap(), label: "llm_api_key", score: 0.95, sev: Severity::Critical },
         Sig { re: Regex::new(r"AIza[0-9A-Za-z_\-]{35}").unwrap(), label: "google_api_key", score: 0.90, sev: Severity::High },
         Sig { re: Regex::new(r"xox[baprs]-[A-Za-z0-9-]{10,}").unwrap(), label: "slack_token", score: 0.90, sev: Severity::High },
         Sig { re: Regex::new(r"(?i)(postgres|postgresql|mysql|mongodb|redis|amqp|ftp)://[^\s:@/]+:[^\s:@/]+@").unwrap(), label: "credential_in_url", score: 0.85, sev: Severity::Critical },
@@ -256,6 +263,32 @@ mod tests {
     fn flags_anthropic_key_with_hyphens() {
         assert!(has(
             &scan("reuse sk-ant-api03-EXAMPLE00000000000000000000000000000000", Direction::Inbound, Source::User),
+            "llm_api_key",
+        ));
+    }
+
+    #[test]
+    fn hyphenated_identifier_is_not_a_key() {
+        // Regression: the old `sk-(?:ant-)?[A-Za-z0-9_-]{16,}` body matched short
+        // hyphen-joined words, redacting benign text.
+        for s in [
+            "install the sk-learn-classifier-module today",
+            "branch sk-2026-q1-report-final-v2 is ready",
+            "ant-colony-optimization in sk-ant-colony-demo-notebook",
+        ] {
+            let f = scan(s, Direction::Inbound, Source::User);
+            assert!(!has(&f, "llm_api_key"), "false positive on {s:?}: {f:?}");
+        }
+    }
+
+    #[test]
+    fn flags_bare_and_project_keys() {
+        assert!(has(
+            &scan("token sk-EXAMPLE00000000000000000000000000000000000000000000", Direction::Inbound, Source::User),
+            "llm_api_key",
+        ));
+        assert!(has(
+            &scan("token sk-proj-EXAMPLE000000000000000000000000-_aBcD", Direction::Inbound, Source::User),
             "llm_api_key",
         ));
     }
