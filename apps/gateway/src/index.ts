@@ -1,21 +1,50 @@
 /**
  * promptward gateway -- an OpenAI/Anthropic-compatible proxy.
  *
- * Per request:
- *   1. scan inbound text   -> tripwire-core (injection + exfiltration)
- *   2. forward to provider (Anthropic / OpenAI) if allowed by policy
- *   3. validate structured output against the caller's JSON Schema (retry on miss)
- *   4. scan outbound text  -> tripwire-core (exfiltration)
- *   5. record tokens + cost + findings to the event store (Postgres)
+ * Per request: scan inbound -> policy (allow/redact/block) -> provider call ->
+ * validate structured output (retry on miss) -> scan outbound -> record tokens,
+ * cost, and findings. Point your SDK's baseURL here; it stays wire-compatible.
  *
- * Drop-in: point your SDK's baseURL here; it stays wire-compatible.
- *
- * TODO(build): implement spec-first -- write tests from the eval datasets, then this pipeline.
- *   - HTTP layer: Hono (light, edge-friendly) or Express.
- *   - tripwire-core binding: napi-rs | wasm | sidecar (decide in SPEC).
- *   - providers: pin exact model ids at build time (see docs/SPEC.md).
+ * T8 ships the app shell, config, event store, and read routes. The proxy
+ * pipeline (/v1/messages, /v1/chat/completions) mounts in T9/T10.
  */
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import { pathToFileURL } from "node:url";
+import { loadConfig, type Config } from "./config.js";
+import { makeStore, type EventStore } from "./store.js";
 
-export async function handleProxy(_req: Request): Promise<Response> {
-  throw new Error("TODO(build): implement the proxy pipeline -- see this file's header and docs/SPEC.md");
+export interface App {
+  app: Hono;
+  store: EventStore;
+  config: Config;
+}
+
+export async function createApp(config: Config = loadConfig()): Promise<App> {
+  const store = await makeStore(config.databaseUrl);
+  const app = new Hono();
+
+  app.get("/health", (c) =>
+    c.json({ ok: true, store: config.databaseUrl ? "postgres" : "memory" }),
+  );
+
+  // Read API for the dashboard.
+  app.get("/v1/requests", async (c) => {
+    const limit = Number(c.req.query("limit") ?? 100);
+    const [requests, stats] = await Promise.all([store.list(limit), store.stats()]);
+    return c.json({ requests, stats });
+  });
+
+  // Proxy routes are mounted by the pipeline module in T9/T10.
+
+  return { app, store, config };
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  const { app, config } = await createApp();
+  serve({ fetch: app.fetch, port: config.port });
+  // eslint-disable-next-line no-console
+  console.log(
+    `promptward gateway listening on http://localhost:${config.port} (health: /health)`,
+  );
 }

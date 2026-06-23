@@ -3,8 +3,27 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "OpenAI/Anthropic-compatible proxy: scans each request via tripwire-core, validates structured output, meters cost.",
+  "description": "OpenAI/Anthropic-compatible proxy: scans each request via tripwire-core, applies policy, validates structured output, meters cost.",
   "scripts": {
-    "dev": "echo 'TODO(build): start the proxy (Hono/Express). See src/index.ts.' && exit 1"
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "@hono/node-server": "^1.13.7",
+    "@promptward/tripwire": "workspace:*",
+    "ajv": "^8.17.1",
+    "hono": "^4.6.14",
+    "openai": "^4.77.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
