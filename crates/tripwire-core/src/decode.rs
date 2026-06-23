@@ -89,27 +89,45 @@ fn hex_candidates(text: &str) -> Vec<Decoded> {
     out
 }
 
+fn hexval(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    }
+}
+
 fn percent_candidates(text: &str) -> Vec<Decoded> {
-    let mut out = Vec::new();
-    for m in PERCENT.find_iter(text) {
-        let s = m.as_str();
-        let bytes: Option<Vec<u8>> = s
-            .split('%')
-            .filter(|p| !p.is_empty())
-            .map(|p| u8::from_str_radix(p, 16).ok())
-            .collect();
-        if let Some(d) = bytes.and_then(texty) {
-            if d != s {
-                out.push(Decoded {
-                    start: m.start(),
-                    end: m.end(),
-                    text: d,
-                    kind: "url",
-                });
+    // Percent-encoding is often interspersed with plaintext
+    // (`ignore%20all%20previous`), so decode the WHOLE string rather than only
+    // consecutive %XX runs.
+    if !PERCENT.is_match(text) {
+        return Vec::new();
+    }
+    let b = text.as_bytes();
+    let mut decoded = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' && i + 3 <= b.len() {
+            if let (Some(h), Some(l)) = (hexval(b[i + 1]), hexval(b[i + 2])) {
+                decoded.push(h * 16 + l);
+                i += 3;
+                continue;
             }
         }
+        decoded.push(b[i]);
+        i += 1;
     }
-    out
+    match texty(decoded) {
+        Some(d) if d != text => vec![Decoded {
+            start: 0,
+            end: text.len(),
+            text: d,
+            kind: "url",
+        }],
+        _ => Vec::new(),
+    }
 }
 
 fn rot13_char(c: char) -> char {

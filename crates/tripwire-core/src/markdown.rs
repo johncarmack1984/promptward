@@ -13,7 +13,7 @@ use regex::Regex;
 use crate::types::{Direction, Finding, Kind, Severity, Source};
 
 static URL: Lazy<Regex> = Lazy::new(|| Regex::new(r"https?://[^\s)\]<>]+").unwrap());
-static LONG_TOKEN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Za-z0-9+/_=-]{20,}").unwrap());
+static LONG_TOKEN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Za-z0-9+/_=-]{16,}").unwrap());
 static SECRET_IN_URL: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{16,}|sk-(?:ant-)?[A-Za-z0-9]{16,}").unwrap()
 });
