@@ -74,8 +74,8 @@ mod tests {
 
     #[test]
     fn scan_flags_unicode_smuggling_as_obfuscation() {
-        // Zero-width split keyword: the smuggling pass should flag it even before
-        // the injection scanner (T4) lands.
+        // Zero-width split keyword: the smuggling pass flags it independently of
+        // the injection scanner.
         let findings = scan("ig\u{200b}nore previous", Direction::Inbound, Source::User);
         assert!(findings
             .iter()

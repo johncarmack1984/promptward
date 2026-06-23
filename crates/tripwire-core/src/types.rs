@@ -90,10 +90,4 @@ impl Finding {
             detail: None,
         }
     }
-
-    /// Attach debug/provenance detail (e.g. the decoder that revealed this).
-    pub fn with_detail(mut self, detail: impl Into<String>) -> Self {
-        self.detail = Some(detail.into());
-        self
-    }
 }

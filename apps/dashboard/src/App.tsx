@@ -88,13 +88,15 @@ export default function App() {
           LLM security gateway
         </span>
 
-        <nav className="tabs" aria-label="views">
+        <nav className="tabs" role="tablist" aria-label="views">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
               className="tab"
               role="tab"
+              id={`tab-${t.id}`}
+              aria-controls={`panel-${t.id}`}
               aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
             >
@@ -117,7 +119,7 @@ export default function App() {
         </span>
       </header>
 
-      <main className="main">
+      <main className="main" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0}>
         {tab === "detection" ? <Detection /> : null}
 
         {tab === "log" ? (

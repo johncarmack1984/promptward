@@ -61,6 +61,7 @@ function outputParts(raw: any): ScanPart[] {
 export function anthropicAdapter(config: Config): ProviderAdapter {
   return {
     name: "anthropic",
+    wantsStreaming: (body) => body?.stream === true,
     inputParts,
     schema: (body) => body?.response_format?.json_schema?.schema ?? body?.promptward?.schema ?? null,
     redactInput: (body, redactions) => applyRedactions(body, redactions),

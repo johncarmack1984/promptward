@@ -9,6 +9,7 @@
     "gateway": "pnpm --filter @promptward/gateway dev",
     "dashboard": "pnpm --filter @promptward/dashboard dev",
     "eval": "pnpm --filter @promptward/evals eval",
+    "test": "pnpm -r test",
     "core:build": "pnpm --filter @promptward/tripwire build",
     "core:build:debug": "pnpm --filter @promptward/tripwire build:debug"
   }

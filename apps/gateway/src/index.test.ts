@@ -16,4 +16,22 @@ describe("gateway app", () => {
     expect(body.requests).toEqual([]);
     expect(body.stats.count).toBe(0);
   });
+
+  it("rejects an oversized request body with 413 before parsing", async () => {
+    const { app } = await createApp(
+      loadConfig({ PROMPTWARD_MAX_SCAN_BYTES: "100" } as NodeJS.ProcessEnv),
+    );
+    const big = JSON.stringify({
+      model: "claude-opus-4-8",
+      messages: [{ role: "user", content: "z".repeat(4000) }],
+    });
+    const res = await app.fetch(
+      new Request("http://local/v1/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: big,
+      }),
+    );
+    expect(res.status).toBe(413);
+  });
 });

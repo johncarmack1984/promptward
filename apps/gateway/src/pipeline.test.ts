@@ -28,6 +28,7 @@ function mock(opts: { responses: ProviderResult[]; schema?: object | null }) {
   const calls: any[] = [];
   const adapter: ProviderAdapter = {
     name: "anthropic",
+    wantsStreaming: (b: any) => b?.stream === true,
     inputParts: (b) => {
       const parts: ScanPart[] = [];
       (b.messages ?? []).forEach((m: any, idx: number) => {
@@ -163,5 +164,23 @@ describe("gateway pipeline", () => {
     const [rec] = await store.list();
     expect(rec.blocked).toBe(true);
     expect(rec.error).toMatch(/fail-closed/);
+  });
+
+  it("rejects a streaming request cleanly without forwarding it", async () => {
+    const store = new InMemoryStore();
+    const { adapter, calls } = mock({ responses: [R("ok")] });
+    const res = await handle(adapter, userBody("hi", { stream: true }), store, cfg());
+    expect(res.status).toBe(400);
+    expect(calls).toHaveLength(0);
+    expect((await store.list())[0].error).toMatch(/streaming/);
+  });
+
+  it("rejects oversized input with 413 (never scans or forwards it)", async () => {
+    const store = new InMemoryStore();
+    const { adapter, calls } = mock({ responses: [R("ok")] });
+    const res = await handle(adapter, userBody("a".repeat(2000)), store, cfg({ maxScanBytes: 1000 }));
+    expect(res.status).toBe(413);
+    expect(calls).toHaveLength(0);
+    expect((await store.list())[0].blocked).toBe(true);
   });
 });

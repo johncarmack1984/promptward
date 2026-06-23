@@ -50,6 +50,7 @@ function outputParts(raw: any): ScanPart[] {
 export function openaiAdapter(config: Config): ProviderAdapter {
   return {
     name: "openai",
+    wantsStreaming: (body) => body?.stream === true,
     inputParts,
     schema: (body) =>
       body?.response_format?.json_schema?.schema ?? body?.response_format?.schema ?? null,

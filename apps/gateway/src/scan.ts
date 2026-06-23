@@ -21,8 +21,3 @@ export type Source =
 export function scan(text: string, direction: Direction, source: Source): Finding[] {
   return rawScan(text, direction, source);
 }
-
-/** Highest finding score in a set, or 0. */
-export function maxScore(findings: Finding[]): number {
-  return findings.reduce((m, f) => Math.max(m, f.score), 0);
-}
