@@ -69,7 +69,7 @@ The detection core runs a fixed, deterministic pipeline: NFKC-normalize and reve
 
 ## What's built
 
-- **tripwire-core** (`crates/tripwire-core`, Rust) -- the hot-path scanners: normalization + smuggling detection, decode-then-rescan, injection (source-aware) and exfiltration (secrets/PII/markdown). 32 unit tests; exposed to TypeScript via a napi addon (`@promptward/tripwire`), which generates the TS types. **Done.**
+- **tripwire-core** (`crates/tripwire-core`, Rust) -- the hot-path scanners: normalization + smuggling detection, decode-then-rescan, injection (source-aware) and exfiltration (secrets/PII/markdown). 38 unit tests; exposed to TypeScript via a napi addon (`@promptward/tripwire`), which generates the TS types. **Done.**
 - **evals** (`evals/`) -- runs the detectors over the labeled corpus and reports the numbers above; deterministic and re-runnable. **Done.**
 - **gateway** (`apps/gateway`, TypeScript / Hono) -- the proxy: inbound and outbound scan, policy (allow / redact / block), wire-compatible provider passthrough, structured-output validation with bounded retry, and per-request cost metering, recording every request to the event store. Anthropic (`/v1/messages`) and OpenAI (`/v1/chat/completions`) routes; in-memory store by default, Postgres optional. **Done.**
 - **dashboard** (`apps/dashboard`, React / Vite) -- the console: a dense, dark, severity-coded surface. Three views -- Detection (the measured eval proof), Requests (live log with expandable inbound/outbound findings, fixture fallback when the gateway is down), and Cost (spend and policy-outcome breakdown). **Done.**
