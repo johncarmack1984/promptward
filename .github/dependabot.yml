@@ -28,6 +28,11 @@ updates:
         dependency-type: "development"
       production:
         dependency-type: "production"
+    ignore:
+      # @types/node tracks the Node LTS line CI runs on (setup-node lts/*), so
+      # majors beyond current LTS are skipped; bump it by hand when LTS moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
