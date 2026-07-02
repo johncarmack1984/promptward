@@ -1,8 +1,8 @@
 # promptward
 
-An LLM gateway that catches what actually hurts in production -- **prompt injection** and **data exfiltration**, on the way in and out -- then **validates structured output** and **meters cost per call**. The point of difference: an **eval harness that proves the detection rate** instead of asserting it.
+An LLM gateway that catches what actually hurts in production: prompt injection and data exfiltration, on the way in and on the way out. It validates structured output and meters cost per call. The difference: an eval harness that proves the detection rate instead of asserting it.
 
-Point your OpenAI or Anthropic SDK at promptward instead of the provider. It stays wire-compatible, scans every request through a fast Rust detection core, blocks or redacts on policy, validates the model's structured output against your schema, and records tokens + cost per call.
+Point your OpenAI or Anthropic SDK at promptward instead of the provider; it stays wire-compatible. Every request is scanned by a fast Rust core, blocked or redacted on policy, validated against your schema, and recorded with tokens + cost.
 
 ![promptward detection console: measured precision, recall, and F1 with per-class recall by attack type](docs/img/detection.webp)
 
@@ -41,9 +41,9 @@ Methodology: pure-Rust deterministic scan (no network), decision threshold 0.5, 
 
 ## Why this exists
 
-Most teams shipping LLM features have the same two unsolved problems: untrusted text reaching the model (injection) and sensitive data leaving in a prompt or response (exfiltration) -- with no measured handle on either. The 2026 attack surface is not 2024's "ignore your instructions": it is indirect injection hidden in fetched documents and tool output, malicious instructions planted in MCP tool descriptions, invisible unicode-tag smuggling, and markdown-image links that exfiltrate data with zero tool calls. promptward puts a thin, fast checkpoint in front of the model that handles those, and -- just as importantly -- ships the evals that say how well it works.
+Most teams shipping LLM features have the same two unsolved problems: untrusted text reaching the model (injection) and sensitive data leaving in a prompt or response (exfiltration) -- with no measured handle on either. The 2026 attack surface is not 2024's "ignore your instructions": it's indirect injection hidden in fetched documents and tool output, malicious instructions planted in MCP tool descriptions, invisible unicode-tag smuggling, and markdown-image links that exfiltrate data with zero tool calls. promptward puts a thin, fast checkpoint in front of the model that handles those -- and ships the evals that say how well it works.
 
-It is open and self-hostable: run the detection in your own VPC, see exactly what fired, and prove the rate. Closest in spirit to a scanner library like LLM Guard, but with a published per-class eval, a Rust hot path, and a built-in cost meter -- and it stays wire-compatible, so it can sit in front of (or beside) an existing gateway rather than replacing it.
+It's open and self-hostable: run the detection in your own VPC, see exactly what fired, and prove the rate. Closest in spirit to a scanner library like LLM Guard, but with a published per-class eval, a Rust hot path, and a built-in cost meter -- and it stays wire-compatible, so it can sit in front of (or beside) an existing gateway rather than replacing it.
 
 ## How it works
 
