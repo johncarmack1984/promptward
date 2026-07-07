@@ -8,7 +8,7 @@ import { performance } from "node:perf_hooks";
 import type { Config } from "./config.js";
 import { computeCost } from "./cost.js";
 import { decide, redactText } from "./policy.js";
-import { scan, type Source } from "./scan.js";
+import { type Source, scan } from "./scan.js";
 import type { EventStore } from "./store.js";
 import type { Finding, PolicyAction, PolicyOutcome, Provider, RequestRecord } from "./types.js";
 import { validateOutput } from "./validate.js";
@@ -138,17 +138,29 @@ export async function handle(
     // event loop scanning it (a real availability lever for an inline proxy).
     const totalBytes = parts.reduce((n, p) => n + Buffer.byteLength(p.text, "utf8"), 0);
     if (totalBytes > config.maxScanBytes) {
-      await record({ action: "block", blocked: true, error: `request too large to scan: ${totalBytes} > ${config.maxScanBytes} bytes` });
+      await record({
+        action: "block",
+        blocked: true,
+        error: `request too large to scan: ${totalBytes} > ${config.maxScanBytes} bytes`,
+      });
       return adapter.errorResponse(
         413,
         `request too large: ${totalBytes} bytes of scannable text exceeds the ${config.maxScanBytes}-byte limit`,
       );
     }
-    const scanned = parts.map((part) => ({ part, findings: scan(part.text, "Inbound", part.source) }));
+    const scanned = parts.map((part) => ({
+      part,
+      findings: scan(part.text, "Inbound", part.source),
+    }));
     inbound = scanned.flatMap((s) => s.findings);
     inPolicy = decide(inbound, config.threshold);
     if (inPolicy.action === "block") {
-      await record({ action: "block", inboundFindings: inbound, blocked: true, error: "inbound blocked by policy" });
+      await record({
+        action: "block",
+        inboundFindings: inbound,
+        blocked: true,
+        error: "inbound blocked by policy",
+      });
       return adapter.errorResponse(403, "request blocked by promptward policy (prompt injection)");
     }
     reqBody =
@@ -156,7 +168,11 @@ export async function handle(
         ? adapter.redactInput(body, redactionsFor(scanned, config.threshold))
         : body;
   } catch (e) {
-    await record({ action: "block", blocked: true, error: `inbound scan failed (fail-closed): ${(e as Error).message}` });
+    await record({
+      action: "block",
+      blocked: true,
+      error: `inbound scan failed (fail-closed): ${(e as Error).message}`,
+    });
     return adapter.errorResponse(502, "promptward scan error; request not forwarded (fail-closed)");
   }
 
@@ -164,7 +180,11 @@ export async function handle(
   // SSE stream, so reject it cleanly (still scanned inbound above) rather than
   // forward it unscanned or 502 on a JSON parse of an event stream.
   if (adapter.wantsStreaming(body)) {
-    await record({ action: inPolicy.action, inboundFindings: inbound, error: "streaming not supported" });
+    await record({
+      action: inPolicy.action,
+      inboundFindings: inbound,
+      error: "streaming not supported",
+    });
     return adapter.errorResponse(
       400,
       "streaming (stream: true) is not supported yet; omit stream or set it to false",
@@ -180,7 +200,11 @@ export async function handle(
     try {
       result = await adapter.call(reqBody, opts.auth);
     } catch (e) {
-      await record({ action: inPolicy.action, inboundFindings: inbound, error: `provider error: ${(e as Error).message}` });
+      await record({
+        action: inPolicy.action,
+        inboundFindings: inbound,
+        error: `provider error: ${(e as Error).message}`,
+      });
       return adapter.errorResponse(502, "upstream provider error");
     }
     inputTokens += result.inputTokens;
@@ -234,9 +258,13 @@ export async function handle(
         blocked: true,
         error: "response blocked by policy",
       });
-      return adapter.errorResponse(403, "response blocked by promptward policy (data exfiltration)");
+      return adapter.errorResponse(
+        403,
+        "response blocked by promptward policy (data exfiltration)",
+      );
     }
-    const redactions = outPolicy.action === "redact" ? redactionsFor(scanned, config.threshold) : [];
+    const redactions =
+      outPolicy.action === "redact" ? redactionsFor(scanned, config.threshold) : [];
     const response = adapter.buildResponse(result.raw, redactions, outPolicy.redacted);
     await record({
       action: moreSevere(inPolicy.action, outPolicy.action),

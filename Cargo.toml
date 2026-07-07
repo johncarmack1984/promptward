@@ -3,3 +3,13 @@
 [workspace]
 members = ["crates/tripwire-core"]
 resolver = "2"
+
+# Workspace lint floor: no hand-written unsafe (deny, not forbid: the napi
+# FFI derive macro scopes its own allow(unsafe_code) internally, which forbid
+# would reject), and the full clippy `all` group surfaces as warnings. Members
+# opt in via [lints] workspace = true.
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

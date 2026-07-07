@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
-import type { RequestRecord, PolicyAction, Severity } from "../types";
 import { ActionBadge, ProviderMark } from "../components/primitives";
+import { clockTime, ms, SEVERITY_RANK, tokens, usd } from "../format";
+import type { PolicyAction, RequestRecord, Severity } from "../types";
 import { Direction } from "./FindingRow";
-import { clockTime, usd, ms, tokens, SEVERITY_RANK } from "../format";
 
 function worstSeverity(r: RequestRecord): Severity | null {
-  const all = [...r.inboundFindings, ...r.outboundFindings];
-  if (all.length === 0) return null;
-  return all.reduce<Severity>((worst, f) => {
+  const [first, ...rest] = [...r.inboundFindings, ...r.outboundFindings];
+  if (!first) return null;
+  return rest.reduce<Severity>((worst, f) => {
     return SEVERITY_RANK[f.severity] > SEVERITY_RANK[worst] ? f.severity : worst;
-  }, all[0].severity);
+  }, first.severity);
 }
 
 const ACTION_FILTERS: PolicyAction[] = ["block", "redact", "allow"];

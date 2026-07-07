@@ -14,19 +14,15 @@
  * single source of truth). Numbers must be a real run, never hand-written.
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { performance } from "node:perf_hooks";
-import * as tripwire from "@promptward/tripwire";
+import { fileURLToPath } from "node:url";
 import type { Finding } from "@promptward/tripwire";
+import * as tripwire from "@promptward/tripwire";
 
 // The napi enums are string-valued; call with plain strings to avoid const-enum
 // runtime friction.
-const scan = tripwire.scan as (
-  text: string,
-  direction: string,
-  source?: string,
-) => Finding[];
+const scan = tripwire.scan as (text: string, direction: string, source?: string) => Finding[];
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = join(HERE, "datasets");
@@ -153,11 +149,7 @@ function pct(x: number): string {
 }
 
 function main(): void {
-  const all = [
-    ...load("injection.jsonl"),
-    ...load("exfiltration.jsonl"),
-    ...load("benign.jsonl"),
-  ];
+  const all = [...load("injection.jsonl"), ...load("exfiltration.jsonl"), ...load("benign.jsonl")];
   const scored = all.map(scoreExample);
 
   const injection = classMetrics(scored, "injection", (s) => s.inj);
@@ -182,7 +174,8 @@ function main(): void {
   const ra = recallAtZeroBenignFp(scored);
 
   // Per-bucket: recall for attack buckets, false-positive rate for benign buckets.
-  const buckets: Record<string, { label: Label; count: number; detected: number; rate: number }> = {};
+  const buckets: Record<string, { label: Label; count: number; detected: number; rate: number }> =
+    {};
   for (const s of scored) {
     const b = (buckets[s.ex.bucket] ??= { label: s.ex.label, count: 0, detected: 0, rate: 0 });
     b.count++;
@@ -267,19 +260,21 @@ function main(): void {
   console.log(row("Prompt injection", injection));
   console.log(row("Data exfiltration", exfiltration));
   console.log(row("Attack (overall)", overall));
-  console.log(
-    `\nBenign false-positive rate: ${pct(benignFpr)}%  (${fp}/${benignTotal})`,
-  );
+  console.log(`\nBenign false-positive rate: ${pct(benignFpr)}%  (${fp}/${benignTotal})`);
   console.log(
     `Recall @ 0 benign FP: ${pct(ra.recall)}%  (threshold ${ra.threshold}; ${ra.allowedFp}/${ra.benignN} benign flagged, effective FPR ${ra.effectiveFprPct.toFixed(1)}%; 1% FPR unresolvable at n=${ra.benignN})`,
   );
   console.log(`Confusion (attack/benign): TP ${tp}  FP ${fp}  FN ${fn}  TN ${tn}`);
-  console.log(`Scan latency: p50 ${performanceBlock.perScanMsP50}ms  p95 ${performanceBlock.perScanMsP95}ms\n`);
+  console.log(
+    `Scan latency: p50 ${performanceBlock.perScanMsP50}ms  p95 ${performanceBlock.perScanMsP95}ms\n`,
+  );
 
   console.log("Per-bucket detection:");
   for (const [name, b] of Object.entries(buckets).sort()) {
     const kind = b.label === "benign" ? "FP-rate" : "recall ";
-    console.log(`  ${name.padEnd(26)} ${kind} ${pct(b.rate).padStart(6)}%  (${b.detected}/${b.count})`);
+    console.log(
+      `  ${name.padEnd(26)} ${kind} ${pct(b.rate).padStart(6)}%  (${b.detected}/${b.count})`,
+    );
   }
   console.log("\n3-class confusion (rows = actual, cols = predicted):");
   console.log("                     inj    exf  clean");

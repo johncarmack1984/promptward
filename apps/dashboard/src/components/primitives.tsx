@@ -1,15 +1,10 @@
-import type { PolicyAction, FindingKind, Severity, Provider } from "../types";
+import type { FindingKind, PolicyAction, Provider, Severity } from "../types";
 
 // A simple geometric shield/tripwire mark. One flat SVG, no gradients -- the
 // only hand-drawn vector in the app, used once in the header.
 export function BrandMark() {
   return (
-    <svg
-      className="brand__mark"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg className="brand__mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 2 4 5v6.2c0 4.7 3.2 7.6 8 8.8 4.8-1.2 8-4.1 8-8.8V5l-8-3Z"
         stroke="var(--accent)"

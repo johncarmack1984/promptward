@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createApp } from "./index.js";
 import { loadConfig } from "./config.js";
+import { createApp } from "./index.js";
 
 describe("gateway app", () => {
   it("serves /health and /v1/requests with the in-memory store", async () => {

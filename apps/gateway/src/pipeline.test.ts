@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { type Config, loadConfig } from "./config.js";
 import { handle, type ProviderAdapter, type ProviderResult, type ScanPart } from "./pipeline.js";
 import { applyRedactions } from "./providers/shared.js";
 import { InMemoryStore } from "./store.js";
-import { loadConfig, type Config } from "./config.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 function cfg(over: Partial<Config> = {}): Config {
   return { ...loadConfig({} as NodeJS.ProcessEnv), ...over };
+}
+
+/** Strict-index helper: fail the test loudly instead of typing around undefined. */
+function must<T>(value: T | undefined | null): T {
+  if (value == null) throw new Error("expected a value");
+  return value;
 }
 
 function userBody(text: string, extra: Record<string, unknown> = {}): any {
@@ -43,7 +49,7 @@ function mock(opts: { responses: ProviderResult[]; schema?: object | null }) {
     withCorrection: (b, c) => ({ ...b, system: [b.system, c].filter(Boolean).join("\n") }),
     call: async (b) => {
       calls.push(b);
-      return opts.responses[Math.min(i++, opts.responses.length - 1)];
+      return must(opts.responses[Math.min(i++, opts.responses.length - 1)]);
     },
     outputParts: (raw) => {
       const parts: ScanPart[] = [];
@@ -75,12 +81,17 @@ describe("gateway pipeline", () => {
   it("allows a benign request and meters cost", async () => {
     const store = new InMemoryStore();
     const { adapter, calls } = mock({ responses: [R("Here are three bullets.")] });
-    const res = await handle(adapter, userBody("Summarize this report in three bullets."), store, cfg());
+    const res = await handle(
+      adapter,
+      userBody("Summarize this report in three bullets."),
+      store,
+      cfg(),
+    );
     expect(res.status).toBe(200);
     expect(calls).toHaveLength(1);
-    const [rec] = await store.list();
+    const rec = must((await store.list())[0]);
     expect(rec.action).toBe("allow");
-    expect(rec.costUsd).toBeCloseTo(100 / 1e6 * 5 + 50 / 1e6 * 25); // 0.00175
+    expect(rec.costUsd).toBeCloseTo((100 / 1e6) * 5 + (50 / 1e6) * 25); // 0.00175
   });
 
   it("blocks prompt injection inbound and never calls the provider", async () => {
@@ -94,7 +105,7 @@ describe("gateway pipeline", () => {
     );
     expect(res.status).toBe(403);
     expect(calls).toHaveLength(0);
-    const [rec] = await store.list();
+    const rec = must((await store.list())[0]);
     expect(rec.blocked).toBe(true);
     expect(rec.action).toBe("block");
   });
@@ -104,7 +115,9 @@ describe("gateway pipeline", () => {
     const { adapter, calls } = mock({ responses: [R("ok")] });
     const res = await handle(
       adapter,
-      userBody("here is my key AKIAIOSFODNN7EXAMPLE and secret wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
+      userBody(
+        "here is my key AKIAIOSFODNN7EXAMPLE and secret wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      ),
       store,
       cfg(),
     );
@@ -112,16 +125,19 @@ describe("gateway pipeline", () => {
     const sent = calls[0].messages.at(-1).content as string;
     expect(sent).toContain("[REDACTED:aws_access_key]");
     expect(sent).not.toContain("AKIAIOSFODNN7EXAMPLE");
-    expect((await store.list())[0].action).toBe("redact");
+    expect(must((await store.list())[0]).action).toBe("redact");
   });
 
   it("validates structured output and retries on a miss", async () => {
     const store = new InMemoryStore();
-    const { adapter, calls } = mock({ schema: SCHEMA, responses: [R("not json at all"), R('{"ok": true}')] });
+    const { adapter, calls } = mock({
+      schema: SCHEMA,
+      responses: [R("not json at all"), R('{"ok": true}')],
+    });
     const res = await handle(adapter, userBody("return ok true"), store, cfg({ maxRetries: 2 }));
     expect(res.status).toBe(200);
     expect(calls).toHaveLength(2);
-    const [rec] = await store.list();
+    const rec = must((await store.list())[0]);
     expect(rec.retries).toBe(1);
     expect(rec.schemaValid).toBe(true);
     expect(rec.inputTokens).toBe(200); // summed across both attempts
@@ -133,7 +149,7 @@ describe("gateway pipeline", () => {
     const res = await handle(adapter, userBody("x"), store, cfg({ maxRetries: 1 }));
     expect(res.status).toBe(422);
     expect(calls).toHaveLength(2);
-    expect((await store.list())[0].error).toContain("validation");
+    expect(must((await store.list())[0]).error).toContain("validation");
   });
 
   it("redacts a secret in the model output", async () => {
@@ -161,7 +177,7 @@ describe("gateway pipeline", () => {
     const res = await handle(boom, userBody("hello"), store, cfg());
     expect(res.status).toBe(502);
     expect(calls).toHaveLength(0); // provider never called
-    const [rec] = await store.list();
+    const rec = must((await store.list())[0]);
     expect(rec.blocked).toBe(true);
     expect(rec.error).toMatch(/fail-closed/);
   });
@@ -172,15 +188,20 @@ describe("gateway pipeline", () => {
     const res = await handle(adapter, userBody("hi", { stream: true }), store, cfg());
     expect(res.status).toBe(400);
     expect(calls).toHaveLength(0);
-    expect((await store.list())[0].error).toMatch(/streaming/);
+    expect(must((await store.list())[0]).error).toMatch(/streaming/);
   });
 
   it("rejects oversized input with 413 (never scans or forwards it)", async () => {
     const store = new InMemoryStore();
     const { adapter, calls } = mock({ responses: [R("ok")] });
-    const res = await handle(adapter, userBody("a".repeat(2000)), store, cfg({ maxScanBytes: 1000 }));
+    const res = await handle(
+      adapter,
+      userBody("a".repeat(2000)),
+      store,
+      cfg({ maxScanBytes: 1000 }),
+    );
     expect(res.status).toBe(413);
     expect(calls).toHaveLength(0);
-    expect((await store.list())[0].blocked).toBe(true);
+    expect(must((await store.list())[0]).blocked).toBe(true);
   });
 });

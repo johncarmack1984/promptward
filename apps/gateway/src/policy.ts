@@ -35,9 +35,7 @@ export function decide(findings: Finding[], threshold: number): PolicyOutcome {
     if (RANK[a] > RANK[action]) action = a;
   }
   const redacted =
-    action === "redact"
-      ? active.filter((f) => actionFor(f) === "redact").map((f) => f.label)
-      : [];
+    action === "redact" ? active.filter((f) => actionFor(f) === "redact").map((f) => f.label) : [];
   return { action, findings: active, redacted };
 }
 

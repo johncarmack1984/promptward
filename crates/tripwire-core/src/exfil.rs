@@ -71,7 +71,7 @@ fn luhn(digits: &[u8]) -> bool {
         sum += x;
         alt = !alt;
     }
-    sum % 10 == 0
+    sum.is_multiple_of(10)
 }
 
 /// Scan `text` (already normalized) for exfiltration findings.

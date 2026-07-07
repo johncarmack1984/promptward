@@ -24,7 +24,11 @@ function inputParts(body: any): ScanPart[] {
   tools.forEach((t: any, i: number) => {
     const d = t?.function?.description;
     if (typeof d === "string") {
-      parts.push({ source: "McpDescription", text: d, path: ["tools", i, "function", "description"] });
+      parts.push({
+        source: "McpDescription",
+        text: d,
+        path: ["tools", i, "function", "description"],
+      });
     }
   });
   return parts;
@@ -41,7 +45,11 @@ function outputParts(raw: any): ScanPart[] {
   (raw?.choices ?? []).forEach((ch: any, i: number) => {
     const content = ch?.message?.content;
     if (typeof content === "string") {
-      parts.push({ source: "ModelOutput", text: content, path: ["choices", i, "message", "content"] });
+      parts.push({
+        source: "ModelOutput",
+        text: content,
+        path: ["choices", i, "message", "content"],
+      });
     }
     // Tool-call arguments are a JSON string; scan it for exfiltration. Redacting
     // a secret inside a quoted value keeps the surrounding JSON valid (the

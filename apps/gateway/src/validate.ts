@@ -29,7 +29,7 @@ function compile(schema: object): ValidateFunction | null {
 /** Pull the first JSON value out of model text (it may wrap it in prose/fences). */
 export function extractJson(text: string): unknown | undefined {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = (fenced ? fenced[1] : text).trim();
+  const candidate = (fenced?.[1] ?? text).trim();
   try {
     return JSON.parse(candidate);
   } catch {

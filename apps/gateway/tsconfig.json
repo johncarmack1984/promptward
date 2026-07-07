@@ -1,14 +1,11 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    // Node service: NodeNext module semantics override the base's bundler set.
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
     "types": ["node"],
-    "noEmit": true,
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src"]

@@ -9,13 +9,15 @@ import type { Source } from "../scan.js";
 /** Set a string value at a JSON path inside `obj` (mutates). No-op if the path
  *  does not fully resolve, so a stale path can never corrupt the body. */
 function setAtPath(obj: any, path: Array<string | number>, value: string): void {
-  if (path.length === 0) return;
+  const last = path[path.length - 1];
+  if (last === undefined) return;
   let node = obj;
   for (let i = 0; i < path.length - 1; i++) {
-    if (node == null) return;
-    node = node[path[i]];
+    const key = path[i];
+    if (node == null || key === undefined) return;
+    node = node[key];
   }
-  if (node != null) node[path[path.length - 1]] = value;
+  if (node != null) node[last] = value;
 }
 
 /** Deep clone of `obj` with each redaction applied at its path. Returns `obj`
