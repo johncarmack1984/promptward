@@ -177,7 +177,11 @@ function main(): void {
   const buckets: Record<string, { label: Label; count: number; detected: number; rate: number }> =
     {};
   for (const s of scored) {
-    const b = (buckets[s.ex.bucket] ??= { label: s.ex.label, count: 0, detected: 0, rate: 0 });
+    let b = buckets[s.ex.bucket];
+    if (!b) {
+      b = { label: s.ex.label, count: 0, detected: 0, rate: 0 };
+      buckets[s.ex.bucket] = b;
+    }
     b.count++;
     if (s.attack >= THRESHOLD) b.detected++;
   }
@@ -249,7 +253,7 @@ function main(): void {
     metrics,
     performance: performanceBlock,
   };
-  writeFileSync(join(HERE, "results.json"), JSON.stringify(artifact, null, 2) + "\n");
+  writeFileSync(join(HERE, "results.json"), `${JSON.stringify(artifact, null, 2)}\n`);
 
   // --- human-readable report ---
   const row = (name: string, m: PRF) =>
