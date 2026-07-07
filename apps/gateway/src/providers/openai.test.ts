@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { loadConfig } from "../config.js";
 import { handle } from "../pipeline.js";
 import { InMemoryStore } from "../store.js";

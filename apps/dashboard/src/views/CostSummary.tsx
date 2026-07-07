@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+
 import { pct, usd } from "../format";
 import type { PolicyAction, RequestRecord, StoreStats } from "../types";
 

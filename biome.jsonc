@@ -21,6 +21,14 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "nursery": {
+        // = prettier-plugin-tailwindcss: one canonical utility order in class
+        // attributes and the cn/cva/clsx call sites.
+        "useSortedClasses": {
+          "level": "error",
+          "options": { "functions": ["cn", "cva", "clsx", "tw"] }
+        }
+      },
       "style": {
         // = eslint react-refresh/only-export-components (vite preset).
         "useComponentExportOnlyModules": {
@@ -30,6 +38,35 @@
       },
       "suspicious": {
         "noConsole": { "level": "off", "options": { "allow": ["log"] } }
+      }
+    }
+  },
+  // Import order encodes shadcn's prettier importOrder taxonomy (react,
+  // third-party, blank, the @/ groups in shadcn's sequence, blank, relative).
+  // ":BLANK_LINE:" is the separator token.
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              ["react", "react/**"],
+              [":BUN:", ":NODE:", ":PACKAGE:", ":PACKAGE_WITH_PROTOCOL:"],
+              ":BLANK_LINE:",
+              "@/types/**",
+              "@/config/**",
+              "@/lib/**",
+              "@/hooks/**",
+              "@/components/ui/**",
+              "@/components/**",
+              "@/styles/**",
+              "@/app/**",
+              ":BLANK_LINE:",
+              ":PATH:"
+            ]
+          }
+        }
       }
     }
   },

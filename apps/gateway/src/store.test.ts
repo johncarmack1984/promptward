@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { InMemoryStore } from "./store.js";
 import type { Finding, RequestRecord } from "./types.js";
 

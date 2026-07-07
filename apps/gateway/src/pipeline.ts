@@ -5,6 +5,7 @@
 // shape and how to call it.
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
+
 import type { Config } from "./config.js";
 import { computeCost } from "./cost.js";
 import { decide, redactText } from "./policy.js";
