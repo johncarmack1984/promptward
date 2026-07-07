@@ -1,3 +1,4 @@
+//! napi build glue for the node addon.
 fn main() {
     // Only wire up Node-API linking when building the native addon (the `node`
     // feature). Plain `cargo test` builds skip this so the test binary links
