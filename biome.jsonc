@@ -21,6 +21,14 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "nursery": {
+        // = prettier-plugin-tailwindcss: one canonical utility order in class
+        // attributes and the cn/cva/clsx call sites.
+        "useSortedClasses": {
+          "level": "error",
+          "options": { "functions": ["cn", "cva", "clsx", "tw"] }
+        }
+      },
       "style": {
         // = eslint react-refresh/only-export-components (vite preset).
         "useComponentExportOnlyModules": {
