@@ -37,7 +37,7 @@ jobs:
         run: pnpm install ${{ github.actor == 'dependabot[bot]' && '--no-frozen-lockfile' || '--frozen-lockfile' }}
 
       - name: Format gate (biome)
-        run: pnpm exec biome format .
+        run: pnpm exec biome check .
 
       - name: Build detection core (napi addon)
         run: pnpm core:build

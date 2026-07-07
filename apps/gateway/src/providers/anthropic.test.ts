@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, type Mock, vi } from "vitest";
 
 import { loadConfig } from "../config.js";
 import { handle } from "../pipeline.js";
@@ -11,9 +11,7 @@ function must<T>(value: T | undefined | null): T {
   return value;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-function okResponse(content: any[]): Response {
+function okResponse(content: unknown[]): Response {
   return new Response(
     JSON.stringify({
       model: "claude-opus-4-8",
@@ -24,7 +22,8 @@ function okResponse(content: any[]): Response {
   );
 }
 const cfg = () => loadConfig({} as NodeJS.ProcessEnv);
-const sentBody = (fetchMock: any) => JSON.parse(must(fetchMock.mock.calls[0])[1].body);
+const sentBody = (fetchMock: Mock) =>
+  JSON.parse((must(fetchMock.mock.calls[0])[1] as { body: string }).body);
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -106,10 +105,10 @@ describe("anthropic adapter -- source-aware scan + redaction", () => {
       cfg(),
     );
     expect(res.status).toBe(200);
-    const blocks = (res.body as any).content;
-    expect(blocks[0].text).toBe("Here is the summary you asked for."); // untouched, not blanked
-    expect(blocks[1].text).toContain("[REDACTED:aws_access_key]");
-    expect(blocks[1].text).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    const blocks = (res.body as { content: Array<{ text?: string }> }).content;
+    expect(must(blocks[0]).text).toBe("Here is the summary you asked for."); // untouched, not blanked
+    expect(must(blocks[1]).text).toContain("[REDACTED:aws_access_key]");
+    expect(must(blocks[1]).text).not.toContain("AKIAIOSFODNN7EXAMPLE");
   });
 
   it("redacts byte-correctly when a multi-byte char precedes the secret", async () => {
@@ -151,11 +150,13 @@ describe("anthropic adapter -- source-aware scan + redaction", () => {
       cfg(),
     );
     expect(res.status).toBe(200);
-    const tu = (res.body as any).content[1];
+    const content = (res.body as { content: Array<Record<string, unknown>> }).content;
+    const tu = must(content[1]);
     expect(tu.type).toBe("tool_use"); // object structure intact
-    expect(tu.input.to).toBe("ops@corp.test"); // non-secret leaf untouched
-    expect(tu.input.body).toContain("[REDACTED:aws_access_key]");
-    expect(tu.input.body).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    const input = tu.input as { to: string; body: string };
+    expect(input.to).toBe("ops@corp.test"); // non-secret leaf untouched
+    expect(input.body).toContain("[REDACTED:aws_access_key]");
+    expect(input.body).not.toContain("AKIAIOSFODNN7EXAMPLE");
     expect(res.headers?.["x-promptward-redacted"]).toContain("aws_access_key");
   });
 
@@ -168,10 +169,18 @@ describe("anthropic adapter -- source-aware scan + redaction", () => {
     await handle(anthropicAdapter(config), body, new InMemoryStore(), config, {
       auth: "sk-ant-caller",
     });
-    expect((must(fetchMock.mock.calls[0])[1] as any).headers["x-api-key"]).toBe("sk-ant-caller");
+    expect(
+      (must(fetchMock.mock.calls[0])[1] as { headers: Record<string, string> }).headers[
+        "x-api-key"
+      ],
+    ).toBe("sk-ant-caller");
 
     fetchMock.mockClear();
     await handle(anthropicAdapter(config), body, new InMemoryStore(), config);
-    expect((must(fetchMock.mock.calls[0])[1] as any).headers["x-api-key"]).toBe("server-key");
+    expect(
+      (must(fetchMock.mock.calls[0])[1] as { headers: Record<string, string> }).headers[
+        "x-api-key"
+      ],
+    ).toBe("server-key");
   });
 });

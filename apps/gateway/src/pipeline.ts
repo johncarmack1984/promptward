@@ -43,33 +43,31 @@ export interface RedactedPart {
   text: string;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ProviderAdapter {
   name: Provider;
   /** Whether the caller asked for a streaming response (stream: true). */
-  wantsStreaming(body: any): boolean;
+  wantsStreaming(body: unknown): boolean;
   /** Every scannable inbound part with its TRUE source -- system prompt, every
    *  user turn, tool results, and tool/MCP descriptions, not just the last turn. */
-  inputParts(body: any): ScanPart[];
+  inputParts(body: unknown): ScanPart[];
   /** A JSON Schema if the caller asked for structured output, else null. */
-  schema(body: any): object | null;
+  schema(body: unknown): object | null;
   /** Return a copy of the request with the given parts redacted in place. */
-  redactInput(body: any, redactions: RedactedPart[]): any;
+  redactInput(body: unknown, redactions: RedactedPart[]): unknown;
   /** Return a copy of the request with a corrective instruction appended. */
-  withCorrection(body: any, correction: string): any;
+  withCorrection(body: unknown, correction: string): unknown;
   /** Call the provider; resolves with text + token usage. Throws on failure.
    *  `auth` is the caller's forwarded credential (the provider auth header
    *  value); the adapter falls back to its configured key when it is undefined. */
-  call(body: any, auth?: string): Promise<ProviderResult>;
+  call(body: unknown, auth?: string): Promise<ProviderResult>;
   /** Every scannable outbound text part of the raw response (every block, every
    *  choice) -- so multi-block / n>1 responses are scanned and redacted in full. */
-  outputParts(raw: any): ScanPart[];
+  outputParts(raw: unknown): ScanPart[];
   /** Build the success wire response, applying outbound redactions in place. */
   buildResponse(raw: unknown, redactions: RedactedPart[], redactedLabels: string[]): WireResponse;
   /** Build a provider-shaped error response. */
   errorResponse(status: number, message: string): WireResponse;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 const RANK: Record<PolicyAction, number> = { allow: 0, redact: 1, block: 2 };
 function moreSevere(a: PolicyAction, b: PolicyAction): PolicyAction {
