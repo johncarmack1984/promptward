@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { type Config, loadConfig } from "./config.js";
 import { handle, type ProviderAdapter, type ProviderResult, type ScanPart } from "./pipeline.js";
-import { applyRedactions } from "./providers/shared.js";
+import { applyRedactions, arr, rec } from "./providers/shared.js";
 import { InMemoryStore } from "./store.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -17,7 +17,7 @@ function must<T>(value: T | undefined | null): T {
   return value;
 }
 
-function userBody(text: string, extra: Record<string, unknown> = {}): any {
+function userBody(text: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return { model: "claude-opus-4-8", messages: [{ role: "user", content: text }], ...extra };
 }
 
@@ -32,14 +32,15 @@ const R = (text: string, over: Partial<ProviderResult> = {}): ProviderResult => 
 
 function mock(opts: { responses: ProviderResult[]; schema?: object | null }) {
   let i = 0;
-  const calls: any[] = [];
+  const calls: unknown[] = [];
   const adapter: ProviderAdapter = {
     name: "anthropic",
-    wantsStreaming: (b: any) => b?.stream === true,
+    wantsStreaming: (b) => rec(b).stream === true,
     inputParts: (b) => {
       const parts: ScanPart[] = [];
-      (b.messages ?? []).forEach((m: any, idx: number) => {
-        if (m?.role === "user" && typeof m.content === "string") {
+      arr(rec(b).messages).forEach((mv, idx) => {
+        const m = rec(mv);
+        if (m.role === "user" && typeof m.content === "string") {
           parts.push({ source: "User", text: m.content, path: ["messages", idx, "content"] });
         }
       });
@@ -47,15 +48,19 @@ function mock(opts: { responses: ProviderResult[]; schema?: object | null }) {
     },
     schema: () => opts.schema ?? null,
     redactInput: (b, redactions) => applyRedactions(b, redactions),
-    withCorrection: (b, c) => ({ ...b, system: [b.system, c].filter(Boolean).join("\n") }),
+    withCorrection: (b, c) => ({
+      ...rec(b),
+      system: [rec(b).system, c].filter(Boolean).join("\n"),
+    }),
     call: async (b) => {
       calls.push(b);
       return must(opts.responses[Math.min(i++, opts.responses.length - 1)]);
     },
     outputParts: (raw) => {
       const parts: ScanPart[] = [];
-      ((raw as any)?.content ?? []).forEach((bl: any, idx: number) => {
-        if (bl?.type === "text") {
+      arr(rec(raw).content).forEach((bv, idx) => {
+        const bl = rec(bv);
+        if (bl.type === "text" && typeof bl.text === "string") {
           parts.push({ source: "ModelOutput", text: bl.text, path: ["content", idx, "text"] });
         }
       });
@@ -123,7 +128,8 @@ describe("gateway pipeline", () => {
       cfg(),
     );
     expect(res.status).toBe(200);
-    const sent = calls[0].messages.at(-1).content as string;
+    const sentMsg = rec(arr(rec(calls[0]).messages).at(-1));
+    const sent = sentMsg.content as string;
     expect(sent).toContain("[REDACTED:aws_access_key]");
     expect(sent).not.toContain("AKIAIOSFODNN7EXAMPLE");
     expect(must((await store.list())[0]).action).toBe("redact");
@@ -161,7 +167,8 @@ describe("gateway pipeline", () => {
     const res = await handle(adapter, userBody("what is my access key"), store, cfg());
     expect(res.status).toBe(200);
     expect(res.headers?.["x-promptward-redacted"]).toContain("aws_access_key");
-    const text = (res.body as any).content[0].text as string;
+    const blocks = (res.body as { content: Array<{ text: string }> }).content;
+    const text = must(blocks[0]).text;
     expect(text).toContain("[REDACTED:aws_access_key]");
     expect(text).not.toContain("AKIAIOSFODNN7EXAMPLE");
   });

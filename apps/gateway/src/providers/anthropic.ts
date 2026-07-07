@@ -3,35 +3,32 @@
 // (after any inbound redaction) rather than reconstruct it through the SDK.
 import type { Config } from "../config.js";
 import type { ProviderAdapter, ProviderResult, ScanPart, WireResponse } from "../pipeline.js";
-import { applyRedactions, stringLeafParts, textParts } from "./shared.js";
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { applyRedactions, arr, rec, stringLeafParts, textParts } from "./shared.js";
 
 // Every scannable inbound part: the system prompt, each user turn's text, the
 // contents of tool_result blocks (tagged Tool), and tool/MCP descriptions --
 // the surfaces where 2026 indirect injection and tool poisoning actually land.
 // Assistant turns are prior model output and are not re-scanned inbound.
-function inputParts(body: any): ScanPart[] {
+function inputParts(body: unknown): ScanPart[] {
   const parts: ScanPart[] = [];
-  if (body?.system != null) parts.push(...textParts(body.system, "System", ["system"]));
+  const b = rec(body);
+  if (b.system != null) parts.push(...textParts(b.system, "System", ["system"]));
 
-  const msgs = Array.isArray(body?.messages) ? body.messages : [];
-  msgs.forEach((m: any, i: number) => {
-    if (m?.role !== "user") return;
+  arr(b.messages).forEach((mv, i) => {
+    const m = rec(mv);
+    if (m.role !== "user") return;
     const base = ["messages", i, "content"];
     parts.push(...textParts(m.content, "User", base));
-    if (Array.isArray(m.content)) {
-      m.content.forEach((b: any, j: number) => {
-        if (b?.type === "tool_result") {
-          parts.push(...textParts(b.content, "Tool", [...base, j, "content"]));
-        }
-      });
-    }
+    arr(m.content).forEach((bv, j) => {
+      if (rec(bv).type === "tool_result") {
+        parts.push(...textParts(rec(bv).content, "Tool", [...base, j, "content"]));
+      }
+    });
   });
 
-  const tools = Array.isArray(body?.tools) ? body.tools : [];
-  tools.forEach((t: any, i: number) => {
-    if (typeof t?.description === "string") {
+  arr(b.tools).forEach((tv, i) => {
+    const t = rec(tv);
+    if (typeof t.description === "string") {
       parts.push({
         source: "McpDescription",
         text: t.description,
@@ -43,21 +40,24 @@ function inputParts(body: any): ScanPart[] {
 }
 
 // Joined text of the response (for structured-output validation).
-function responseText(raw: any): string {
-  return (raw?.content ?? [])
-    .filter((b: any) => b?.type === "text")
-    .map((b: any) => b.text as string)
+function responseText(raw: unknown): string {
+  return arr(rec(raw).content)
+    .flatMap((bv) => {
+      const b = rec(bv);
+      return b.type === "text" && typeof b.text === "string" ? [b.text] : [];
+    })
     .join("");
 }
 
 // Each outbound text block, addressable for in-place redaction (no block is
 // blanked or collapsed).
-function outputParts(raw: any): ScanPart[] {
+function outputParts(raw: unknown): ScanPart[] {
   const parts: ScanPart[] = [];
-  (raw?.content ?? []).forEach((b: any, i: number) => {
-    if (b?.type === "text" && typeof b.text === "string") {
+  arr(rec(raw).content).forEach((bv, i) => {
+    const b = rec(bv);
+    if (b.type === "text" && typeof b.text === "string") {
       parts.push({ source: "ModelOutput", text: b.text, path: ["content", i, "text"] });
-    } else if (b?.type === "tool_use" && b.input && typeof b.input === "object") {
+    } else if (b.type === "tool_use" && b.input && typeof b.input === "object") {
       // Exfiltration can ride out inside a tool-call argument; scan every string
       // leaf of the structured input and redact it in place if needed.
       parts.push(...stringLeafParts(b.input, "ModelOutput", ["content", i, "input"]));
@@ -69,14 +69,17 @@ function outputParts(raw: any): ScanPart[] {
 export function anthropicAdapter(config: Config): ProviderAdapter {
   return {
     name: "anthropic",
-    wantsStreaming: (body) => body?.stream === true,
+    wantsStreaming: (body) => rec(body).stream === true,
     inputParts,
-    schema: (body) =>
-      body?.response_format?.json_schema?.schema ?? body?.promptward?.schema ?? null,
+    schema: (body) => {
+      const b = rec(body);
+      const s = rec(rec(b.response_format).json_schema).schema ?? rec(b.promptward).schema ?? null;
+      return typeof s === "object" ? s : null;
+    },
     redactInput: (body, redactions) => applyRedactions(body, redactions),
     withCorrection: (body, correction) => ({
-      ...body,
-      system: [body?.system, correction].filter(Boolean).join("\n\n"),
+      ...rec(body),
+      system: [rec(body).system, correction].filter(Boolean).join("\n\n"),
     }),
     async call(body, auth): Promise<ProviderResult> {
       const res = await fetch(`${config.anthropicBaseUrl}/v1/messages`, {
@@ -89,13 +92,24 @@ export function anthropicAdapter(config: Config): ProviderAdapter {
         },
         body: JSON.stringify(body),
       });
-      const json: any = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message ?? `provider returned ${res.status}`);
+      const json: unknown = await res.json();
+      const j = rec(json);
+      if (!res.ok) {
+        const msg = rec(j.error).message;
+        throw new Error(typeof msg === "string" ? msg : `provider returned ${res.status}`);
+      }
+      const usage = rec(j.usage);
+      const fallbackModel = rec(body).model;
       return {
         text: responseText(json),
-        inputTokens: json?.usage?.input_tokens ?? 0,
-        outputTokens: json?.usage?.output_tokens ?? 0,
-        model: json?.model ?? body?.model ?? "unknown",
+        inputTokens: typeof usage.input_tokens === "number" ? usage.input_tokens : 0,
+        outputTokens: typeof usage.output_tokens === "number" ? usage.output_tokens : 0,
+        model:
+          typeof j.model === "string"
+            ? j.model
+            : typeof fallbackModel === "string"
+              ? fallbackModel
+              : "unknown",
         raw: json,
       };
     },
@@ -113,4 +127,3 @@ export function anthropicAdapter(config: Config): ProviderAdapter {
     }),
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */

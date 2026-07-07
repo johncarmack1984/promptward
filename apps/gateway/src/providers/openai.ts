@@ -2,27 +2,24 @@
 // Anthropic; only the wire shape differs.
 import type { Config } from "../config.js";
 import type { ProviderAdapter, ProviderResult, ScanPart, WireResponse } from "../pipeline.js";
-import { applyRedactions, textParts } from "./shared.js";
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { applyRedactions, arr, rec, textParts } from "./shared.js";
 
 // Every scannable inbound part: the system message, each user turn (string or
 // vision text parts), tool-result messages (tagged Tool), and tool/function
 // descriptions. Assistant turns are prior model output and are not re-scanned.
-function inputParts(body: any): ScanPart[] {
+function inputParts(body: unknown): ScanPart[] {
   const parts: ScanPart[] = [];
-  const msgs = Array.isArray(body?.messages) ? body.messages : [];
-  msgs.forEach((m: any, i: number) => {
+  arr(rec(body).messages).forEach((mv, i) => {
+    const m = rec(mv);
     const base = ["messages", i, "content"];
-    if (m?.role === "system") parts.push(...textParts(m.content, "System", base));
-    else if (m?.role === "user") parts.push(...textParts(m.content, "User", base));
-    else if (m?.role === "tool") parts.push(...textParts(m.content, "Tool", base));
+    if (m.role === "system") parts.push(...textParts(m.content, "System", base));
+    else if (m.role === "user") parts.push(...textParts(m.content, "User", base));
+    else if (m.role === "tool") parts.push(...textParts(m.content, "Tool", base));
     // assistant: prior model output, not re-scanned inbound
   });
 
-  const tools = Array.isArray(body?.tools) ? body.tools : [];
-  tools.forEach((t: any, i: number) => {
-    const d = t?.function?.description;
+  arr(rec(body).tools).forEach((tv, i) => {
+    const d = rec(rec(tv).function).description;
     if (typeof d === "string") {
       parts.push({
         source: "McpDescription",
@@ -34,16 +31,18 @@ function inputParts(body: any): ScanPart[] {
   return parts;
 }
 
-function responseText(raw: any): string {
-  return raw?.choices?.[0]?.message?.content ?? "";
+function responseText(raw: unknown): string {
+  const content = rec(rec(arr(rec(raw).choices)[0]).message).content;
+  return typeof content === "string" ? content : "";
 }
 
 // Every choice's message content (n>1 included), each addressable for in-place
 // redaction so no choice is returned unscanned.
-function outputParts(raw: any): ScanPart[] {
+function outputParts(raw: unknown): ScanPart[] {
   const parts: ScanPart[] = [];
-  (raw?.choices ?? []).forEach((ch: any, i: number) => {
-    const content = ch?.message?.content;
+  arr(rec(raw).choices).forEach((cv, i) => {
+    const message = rec(rec(cv).message);
+    const content = message.content;
     if (typeof content === "string") {
       parts.push({
         source: "ModelOutput",
@@ -54,8 +53,8 @@ function outputParts(raw: any): ScanPart[] {
     // Tool-call arguments are a JSON string; scan it for exfiltration. Redacting
     // a secret inside a quoted value keeps the surrounding JSON valid (the
     // placeholder contains no quote or backslash).
-    (ch?.message?.tool_calls ?? []).forEach((tc: any, j: number) => {
-      const args = tc?.function?.arguments;
+    arr(message.tool_calls).forEach((tv, j) => {
+      const args = rec(rec(tv).function).arguments;
       if (typeof args === "string" && args.length > 0) {
         parts.push({
           source: "ModelOutput",
@@ -71,14 +70,17 @@ function outputParts(raw: any): ScanPart[] {
 export function openaiAdapter(config: Config): ProviderAdapter {
   return {
     name: "openai",
-    wantsStreaming: (body) => body?.stream === true,
+    wantsStreaming: (body) => rec(body).stream === true,
     inputParts,
-    schema: (body) =>
-      body?.response_format?.json_schema?.schema ?? body?.response_format?.schema ?? null,
+    schema: (body) => {
+      const rf = rec(rec(body).response_format);
+      const s = rec(rf.json_schema).schema ?? rf.schema ?? null;
+      return typeof s === "object" ? s : null;
+    },
     redactInput: (body, redactions) => applyRedactions(body, redactions),
     withCorrection: (body, correction) => ({
-      ...body,
-      messages: [...(body?.messages ?? []), { role: "system", content: correction }],
+      ...rec(body),
+      messages: [...arr(rec(body).messages), { role: "system", content: correction }],
     }),
     async call(body, auth): Promise<ProviderResult> {
       const res = await fetch(`${config.openaiBaseUrl}/chat/completions`, {
@@ -91,13 +93,24 @@ export function openaiAdapter(config: Config): ProviderAdapter {
         },
         body: JSON.stringify(body),
       });
-      const json: any = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message ?? `provider returned ${res.status}`);
+      const json: unknown = await res.json();
+      const j = rec(json);
+      if (!res.ok) {
+        const msg = rec(j.error).message;
+        throw new Error(typeof msg === "string" ? msg : `provider returned ${res.status}`);
+      }
+      const usage = rec(j.usage);
+      const fallbackModel = rec(body).model;
       return {
         text: responseText(json),
-        inputTokens: json?.usage?.prompt_tokens ?? 0,
-        outputTokens: json?.usage?.completion_tokens ?? 0,
-        model: json?.model ?? body?.model ?? "unknown",
+        inputTokens: typeof usage.prompt_tokens === "number" ? usage.prompt_tokens : 0,
+        outputTokens: typeof usage.completion_tokens === "number" ? usage.completion_tokens : 0,
+        model:
+          typeof j.model === "string"
+            ? j.model
+            : typeof fallbackModel === "string"
+              ? fallbackModel
+              : "unknown",
         raw: json,
       };
     },
@@ -115,4 +128,3 @@ export function openaiAdapter(config: Config): ProviderAdapter {
     }),
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */

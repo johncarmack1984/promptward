@@ -11,7 +11,11 @@ function must<T>(value: T | undefined | null): T {
   return value;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/** The first choice of a wire response body, typed for what these tests read. */
+type WireChoice = {
+  message: { content?: string; tool_calls?: Array<{ function: { arguments: string } }> };
+};
+const choice0 = (body: unknown) => must((body as { choices: WireChoice[] }).choices[0]);
 
 function okResponse(text: string): Response {
   return new Response(
@@ -41,7 +45,7 @@ describe("openai adapter", () => {
     );
 
     expect(res.status).toBe(200);
-    expect((res.body as any).choices[0].message.content).toBe("Here is a summary.");
+    expect(choice0(res.body).message.content).toBe("Here is a summary.");
     expect(fetchMock).toHaveBeenCalledOnce();
     const rec = must((await store.list())[0]);
     expect(rec.costUnpriced).toBe(true);
@@ -65,7 +69,7 @@ describe("openai adapter", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers?.["x-promptward-redacted"]).toContain("aws_access_key");
-    expect((res.body as any).choices[0].message.content).toContain("[REDACTED:aws_access_key]");
+    expect(choice0(res.body).message.content).toContain("[REDACTED:aws_access_key]");
   });
 
   it("redacts a secret inside tool_call arguments, keeping valid JSON", async () => {
@@ -102,7 +106,7 @@ describe("openai adapter", () => {
       config,
     );
     expect(res.status).toBe(200);
-    const out = (res.body as any).choices[0].message.tool_calls[0].function.arguments as string;
+    const out = must(must(choice0(res.body).message.tool_calls)[0]).function.arguments;
     expect(out).toContain("[REDACTED:aws_access_key]");
     expect(out).not.toContain("AKIAIOSFODNN7EXAMPLE");
     const parsed = JSON.parse(out); // redaction kept the JSON valid
@@ -118,14 +122,16 @@ describe("openai adapter", () => {
     await handle(openaiAdapter(config), body, new InMemoryStore(), config, {
       auth: "Bearer sk-caller",
     });
-    expect((must(fetchMock.mock.calls[0])[1] as any).headers.authorization).toBe(
-      "Bearer sk-caller",
-    );
+    expect(
+      (must(fetchMock.mock.calls[0])[1] as { headers: Record<string, string> }).headers
+        .authorization,
+    ).toBe("Bearer sk-caller");
 
     fetchMock.mockClear();
     await handle(openaiAdapter(config), body, new InMemoryStore(), config);
-    expect((must(fetchMock.mock.calls[0])[1] as any).headers.authorization).toBe(
-      "Bearer server-key",
-    );
+    expect(
+      (must(fetchMock.mock.calls[0])[1] as { headers: Record<string, string> }).headers
+        .authorization,
+    ).toBe("Bearer server-key");
   });
 });

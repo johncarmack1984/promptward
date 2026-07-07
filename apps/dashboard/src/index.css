@@ -9,6 +9,10 @@
  * separate data; cards are avoided. Dark-locked, single theme.
  */
 
+/* app.css lives in a cascade layer so unlayered rules here -- notably the
+ * reduced-motion kill below -- win by cascade order, no !important needed. */
+@import "./app.css" layer(app);
+
 :root {
   color-scheme: dark;
 
@@ -144,7 +148,7 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   * {
-    animation: none !important;
-    transition: none !important;
+    animation: none;
+    transition: none;
   }
 }

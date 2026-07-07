@@ -14,7 +14,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "check": "biome format . && pnpm -r --if-present typecheck && pnpm core:build && cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings && cargo test -p tripwire-core --locked && pnpm eval",
+    "check": "biome check . && pnpm -r --if-present typecheck && pnpm core:build && cargo fmt --all --check && cargo clippy --workspace --all-targets --locked -- -D warnings && cargo test -p tripwire-core --locked && pnpm eval",
     "core:build": "pnpm --filter @promptward/tripwire build",
     "core:build:debug": "pnpm --filter @promptward/tripwire build:debug"
   },

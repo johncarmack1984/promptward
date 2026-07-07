@@ -41,6 +41,21 @@
       }
     }
   },
+  "overrides": [
+    {
+      // WAI-ARIA tabs pattern: the tabpanel carries tabIndex={0} by design
+      // (focusable panel with no focusable content inside); the rule cannot
+      // see the authoring-practices convention.
+      "includes": ["apps/dashboard/src/App.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noNoninteractiveTabindex": "off"
+          }
+        }
+      }
+    }
+  ],
   // Import order encodes shadcn's prettier importOrder taxonomy (react,
   // third-party, blank, the @/ groups in shadcn's sequence, blank, relative).
   // ":BLANK_LINE:" is the separator token.

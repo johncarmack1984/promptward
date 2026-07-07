@@ -6,7 +6,6 @@ import type { RequestsResponse } from "./types";
 import { CostSummary } from "./views/CostSummary";
 import { Detection } from "./views/Detection";
 import { RequestLog } from "./views/RequestLog";
-import "./app.css";
 
 type Tab = "detection" | "log" | "cost";
 
@@ -94,7 +93,7 @@ export default function App() {
           LLM security gateway
         </span>
 
-        <nav className="tabs" role="tablist" aria-label="views">
+        <div className="tabs" role="tablist" aria-label="views">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -111,7 +110,7 @@ export default function App() {
               {t.id === "cost" && data ? <span className="tab__count">{findCount}</span> : null}
             </button>
           ))}
-        </nav>
+        </div>
 
         <span className="header__spacer" />
 
