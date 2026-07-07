@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import type { RequestRecord, StoreStats, PolicyAction } from "../types";
-import { usd, pct } from "../format";
+import { pct, usd } from "../format";
+import type { PolicyAction, RequestRecord, StoreStats } from "../types";
 
 interface ModelSpend {
   model: string;
@@ -9,13 +9,7 @@ interface ModelSpend {
   unpriced: number;
 }
 
-export function CostSummary({
-  records,
-  stats,
-}: {
-  records: RequestRecord[];
-  stats: StoreStats;
-}) {
+export function CostSummary({ records, stats }: { records: RequestRecord[]; stats: StoreStats }) {
   const actionCounts = useMemo(() => {
     const c: Record<PolicyAction, number> = { block: 0, redact: 0, allow: 0 };
     for (const r of records) c[r.action] += 1;

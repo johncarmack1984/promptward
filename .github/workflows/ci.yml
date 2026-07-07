@@ -36,11 +36,17 @@ jobs:
         # PRs; relax it for Dependabot only (CI still installs the bumped deps).
         run: pnpm install ${{ github.actor == 'dependabot[bot]' && '--no-frozen-lockfile' || '--frozen-lockfile' }}
 
+      - name: Format gate (biome)
+        run: pnpm exec biome format .
+
       - name: Build detection core (napi addon)
         run: pnpm core:build
 
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
       - name: Rust unit tests
-        run: cargo test -p tripwire-core
+        run: cargo test -p tripwire-core --locked
 
       - name: Eval (gated on detection floor)
         run: pnpm eval
@@ -62,11 +68,20 @@ jobs:
             console.log("detection metrics current");
           '
 
-      - name: Gateway typecheck
-        run: pnpm --filter @promptward/gateway typecheck
+      - name: Typecheck (all packages)
+        run: pnpm -r --if-present typecheck
 
       - name: Gateway tests
         run: pnpm --filter @promptward/gateway test
 
       - name: Dashboard build
         run: pnpm --filter @promptward/dashboard build
+
+  deny:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v2.0.20
+        with:
+          command: check advisories bans licenses sources

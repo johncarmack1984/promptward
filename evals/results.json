@@ -149,8 +149,8 @@
     ]
   },
   "performance": {
-    "perScanMsP50": 0.0159,
-    "perScanMsP95": 0.0279,
+    "perScanMsP50": 0.0162,
+    "perScanMsP95": 0.028,
     "scansTimed": 855
   }
 }

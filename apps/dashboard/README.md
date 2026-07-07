@@ -10,7 +10,7 @@ The promptward console: a dense, dark security surface for the gateway. Three vi
 
 ```bash
 pnpm install            # once, at the repo root
-pnpm dashboard          # vite dev server on http://localhost:5173
+pnpm dashboard          # vite dev server on http://localhost:47306
 ```
 
 In dev, `/api/*` is proxied to the gateway at `http://localhost:8787` (same-origin, no CORS). Start the gateway with `pnpm gateway` to see live traffic; otherwise the console shows bundled sample data and labels itself as such.

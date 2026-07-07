@@ -1,5 +1,5 @@
-import type { RequestsResponse } from "./types";
 import { SAMPLE } from "./data/sampleRequests";
+import type { RequestsResponse } from "./types";
 
 export type Source = "live" | "fixture";
 

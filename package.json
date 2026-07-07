@@ -6,11 +6,19 @@
   "license": "MIT",
   "packageManager": "pnpm@10.30.3",
   "scripts": {
+    "dev": "pnpm --parallel --filter @promptward/gateway --filter @promptward/dashboard dev",
     "gateway": "pnpm --filter @promptward/gateway dev",
     "dashboard": "pnpm --filter @promptward/dashboard dev",
     "eval": "pnpm --filter @promptward/evals eval",
     "test": "pnpm -r test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "check": "biome format . && pnpm -r --if-present typecheck && pnpm core:build && cargo clippy --workspace --all-targets --locked -- -D warnings && cargo test -p tripwire-core --locked && pnpm eval",
     "core:build": "pnpm --filter @promptward/tripwire build",
     "core:build:debug": "pnpm --filter @promptward/tripwire build:debug"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.2"
   }
 }

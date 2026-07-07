@@ -3,8 +3,8 @@
 // no hand-copied drift. Runs automatically before dev / build / typecheck.
 // The destination (src/data/results.json) is generated and gitignored.
 import { copyFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = join(here, "../../../evals/results.json");

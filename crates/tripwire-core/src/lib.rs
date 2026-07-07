@@ -6,6 +6,7 @@
 //!   2. injection scan (source-aware) on the normalized text
 //!   3. exfiltration scan (secrets/PII/markdown-exfil) on the normalized text
 //!   4. decode-then-rescan (base64/hex/url/rot13) of any encoded payloads
+//!
 //! Spans are mapped back to byte offsets in the ORIGINAL text for redaction.
 //!
 //! Everything here is pure, deterministic, and allocation-light. The optional

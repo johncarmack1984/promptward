@@ -1,6 +1,6 @@
 import resultsRaw from "../data/results.json";
-import type { EvalResults, Bucket } from "../types";
 import { pct } from "../format";
+import type { Bucket, EvalResults } from "../types";
 
 const results = resultsRaw as EvalResults;
 
@@ -77,8 +77,8 @@ export function Detection() {
       <div className="section-title">
         <h2 id="detection-h">Detection rate</h2>
         <p>
-          measured by the eval harness over {m.corpusSize} labeled examples, decision
-          threshold {m.threshold}
+          measured by the eval harness over {m.corpusSize} labeled examples, decision threshold{" "}
+          {m.threshold}
         </p>
       </div>
 
@@ -102,11 +102,11 @@ export function Detection() {
             </div>
           </div>
           <p className="proof__note">
-            <b>Zero false positives</b> across all {m.labelCounts.benign} benign examples,
-            including hard negatives written to trip naive filters: quoted attack text,
-            security questions, code with <span className="mono">apiKey</span> variables, git
-            SHAs, and benign markdown links. {m.overall.tp} of {m.overall.tp + m.overall.fn}{" "}
-            attacks caught; {m.overall.fp} clean prompts misflagged.
+            <b>Zero false positives</b> across all {m.labelCounts.benign} benign examples, including
+            hard negatives written to trip naive filters: quoted attack text, security questions,
+            code with <span className="mono">apiKey</span> variables, git SHAs, and benign markdown
+            links. {m.overall.tp} of {m.overall.tp + m.overall.fn} attacks caught; {m.overall.fp}{" "}
+            clean prompts misflagged.
           </p>
         </div>
 

@@ -26,3 +26,6 @@ napi-derive = { version = "3", features = ["type-def"], optional = true }
 
 [build-dependencies]
 napi-build = "2"
+
+[lints]
+workspace = true

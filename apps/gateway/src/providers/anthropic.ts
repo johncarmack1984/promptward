@@ -32,7 +32,11 @@ function inputParts(body: any): ScanPart[] {
   const tools = Array.isArray(body?.tools) ? body.tools : [];
   tools.forEach((t: any, i: number) => {
     if (typeof t?.description === "string") {
-      parts.push({ source: "McpDescription", text: t.description, path: ["tools", i, "description"] });
+      parts.push({
+        source: "McpDescription",
+        text: t.description,
+        path: ["tools", i, "description"],
+      });
     }
   });
   return parts;
@@ -67,7 +71,8 @@ export function anthropicAdapter(config: Config): ProviderAdapter {
     name: "anthropic",
     wantsStreaming: (body) => body?.stream === true,
     inputParts,
-    schema: (body) => body?.response_format?.json_schema?.schema ?? body?.promptward?.schema ?? null,
+    schema: (body) =>
+      body?.response_format?.json_schema?.schema ?? body?.promptward?.schema ?? null,
     redactInput: (body, redactions) => applyRedactions(body, redactions),
     withCorrection: (body, correction) => ({
       ...body,

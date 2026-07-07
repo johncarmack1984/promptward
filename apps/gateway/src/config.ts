@@ -21,7 +21,11 @@ export interface Config {
 /** Parse a numeric env var with a default and optional clamp. A missing OR
  *  unparseable value falls back to the default -- never NaN, so a typo like
  *  PROMPTWARD_THRESHOLD=high can't silently disable enforcement. */
-function num(raw: string | undefined, fallback: number, opts: { min?: number; max?: number } = {}): number {
+function num(
+  raw: string | undefined,
+  fallback: number,
+  opts: { min?: number; max?: number } = {},
+): number {
   if (raw === undefined || raw === "") return fallback;
   const n = Number(raw);
   if (!Number.isFinite(n)) return fallback;

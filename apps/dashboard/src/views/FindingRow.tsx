@@ -1,5 +1,5 @@
+import { KindTag, SeverityTag } from "../components/primitives";
 import type { Finding } from "../types";
-import { SeverityTag, KindTag } from "../components/primitives";
 
 export function FindingItem({ finding }: { finding: Finding }) {
   const f = finding;
@@ -32,13 +32,7 @@ export function FindingItem({ finding }: { finding: Finding }) {
   );
 }
 
-export function Direction({
-  label,
-  findings,
-}: {
-  label: string;
-  findings: Finding[];
-}) {
+export function Direction({ label, findings }: { label: string; findings: Finding[] }) {
   return (
     <div className="dir">
       <div className="dir__head">
@@ -52,7 +46,7 @@ export function Direction({
           <span className="ok">clean</span> no findings on this direction
         </div>
       ) : (
-        findings.map((f, i) => <FindingItem key={`${f.label}-${f.start}-${i}`} finding={f} />)
+        findings.map((f) => <FindingItem key={`${f.label}-${f.start}-${f.end}`} finding={f} />)
       )}
     </div>
   );

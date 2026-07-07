@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { handle } from "../pipeline.js";
-import { openaiAdapter } from "./openai.js";
-import { InMemoryStore } from "../store.js";
 import { loadConfig } from "../config.js";
+import { handle } from "../pipeline.js";
+import { InMemoryStore } from "../store.js";
+import { openaiAdapter } from "./openai.js";
+
+/** Strict-index helper: fail the test loudly instead of typing around undefined. */
+function must<T>(value: T | undefined | null): T {
+  if (value == null) throw new Error("expected a value");
+  return value;
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -36,13 +42,16 @@ describe("openai adapter", () => {
     expect(res.status).toBe(200);
     expect((res.body as any).choices[0].message.content).toBe("Here is a summary.");
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [rec] = await store.list();
+    const rec = must((await store.list())[0]);
     expect(rec.costUnpriced).toBe(true);
     expect(rec.costUsd).toBeNull();
   });
 
   it("redacts a secret in the model output", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(okResponse("your key is AKIAIOSFODNN7EXAMPLE")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(okResponse("your key is AKIAIOSFODNN7EXAMPLE")),
+    );
     const store = new InMemoryStore();
     const config = loadConfig({} as NodeJS.ProcessEnv);
 
@@ -71,7 +80,9 @@ describe("openai adapter", () => {
                 message: {
                   role: "assistant",
                   content: null,
-                  tool_calls: [{ id: "c1", type: "function", function: { name: "send", arguments: args } }],
+                  tool_calls: [
+                    { id: "c1", type: "function", function: { name: "send", arguments: args } },
+                  ],
                 },
               },
             ],
@@ -103,11 +114,17 @@ describe("openai adapter", () => {
     const config = loadConfig({ OPENAI_API_KEY: "server-key" } as NodeJS.ProcessEnv);
     const body = { model: "gpt-test", messages: [{ role: "user", content: "hi" }] };
 
-    await handle(openaiAdapter(config), body, new InMemoryStore(), config, { auth: "Bearer sk-caller" });
-    expect((fetchMock.mock.calls[0][1] as any).headers.authorization).toBe("Bearer sk-caller");
+    await handle(openaiAdapter(config), body, new InMemoryStore(), config, {
+      auth: "Bearer sk-caller",
+    });
+    expect((must(fetchMock.mock.calls[0])[1] as any).headers.authorization).toBe(
+      "Bearer sk-caller",
+    );
 
     fetchMock.mockClear();
     await handle(openaiAdapter(config), body, new InMemoryStore(), config);
-    expect((fetchMock.mock.calls[0][1] as any).headers.authorization).toBe("Bearer server-key");
+    expect((must(fetchMock.mock.calls[0])[1] as any).headers.authorization).toBe(
+      "Bearer server-key",
+    );
   });
 });

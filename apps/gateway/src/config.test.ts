@@ -5,7 +5,10 @@ describe("config", () => {
   it("falls back to defaults on unparseable numerics (never NaN)", () => {
     // A typo must not silently disable enforcement (threshold NaN => f.score >= NaN
     // is always false => nothing ever flags).
-    const c = loadConfig({ PROMPTWARD_THRESHOLD: "high", PROMPTWARD_MAX_RETRIES: "lots" } as NodeJS.ProcessEnv);
+    const c = loadConfig({
+      PROMPTWARD_THRESHOLD: "high",
+      PROMPTWARD_MAX_RETRIES: "lots",
+    } as NodeJS.ProcessEnv);
     expect(c.threshold).toBe(0.5);
     expect(c.maxRetries).toBe(2);
   });

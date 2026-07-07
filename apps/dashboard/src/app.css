@@ -77,7 +77,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: color 0.12s ease, border-color 0.12s ease;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .tab:hover {
@@ -431,6 +433,11 @@ table.grid tbody tr:last-child {
   border-bottom: none;
 }
 
+table.grid td {
+  padding: 8px 18px;
+  vertical-align: middle;
+}
+
 table.grid tbody tr.group-head td {
   background: var(--surface-1);
   color: var(--text-mute);
@@ -439,11 +446,6 @@ table.grid tbody tr.group-head td {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 7px 18px;
-}
-
-table.grid td {
-  padding: 8px 18px;
-  vertical-align: middle;
 }
 
 td.bucket-name {
@@ -560,7 +562,9 @@ td.r.full {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  transition: border-color 0.12s ease, color 0.12s ease;
+  transition:
+    border-color 0.12s ease,
+    color 0.12s ease;
 }
 
 .filter:hover {
@@ -610,8 +614,7 @@ td.r.full {
 .log__header,
 .row {
   display: grid;
-  grid-template-columns:
-    96px 86px minmax(170px, 1fr) 78px 92px 96px 92px 18px;
+  grid-template-columns: 96px 86px minmax(170px, 1fr) 78px 92px 96px 92px 18px;
   align-items: center;
   gap: 12px;
   padding: 0 16px;

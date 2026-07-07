@@ -9,15 +9,16 @@
  * and mounts the proxy pipeline at /v1/messages (Anthropic) and
  * /v1/chat/completions (OpenAI).
  */
+
+import { pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { pathToFileURL } from "node:url";
-import { loadConfig, type Config } from "./config.js";
-import { makeStore, type EventStore } from "./store.js";
+import { type Config, loadConfig } from "./config.js";
 import { handle } from "./pipeline.js";
 import { anthropicAdapter } from "./providers/anthropic.js";
 import { openaiAdapter } from "./providers/openai.js";
+import { type EventStore, makeStore } from "./store.js";
 
 export interface App {
   app: Hono;
@@ -62,7 +63,10 @@ export async function createApp(config: Config = loadConfig()): Promise<App> {
   const limit = bodyLimit({
     maxSize: config.maxScanBytes * 8,
     onError: (c) =>
-      c.json({ error: { type: "promptward_policy_error", message: "request body too large" } }, 413),
+      c.json(
+        { error: { type: "promptward_policy_error", message: "request body too large" } },
+        413,
+      ),
   });
   app.post("/v1/messages", limit, proxy(anthropicAdapter, "x-api-key")); // Anthropic
   app.post("/v1/chat/completions", limit, proxy(openaiAdapter, "authorization")); // OpenAI
@@ -74,7 +78,5 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const { app, config } = await createApp();
   serve({ fetch: app.fetch, port: config.port });
   // eslint-disable-next-line no-console
-  console.log(
-    `promptward gateway listening on http://localhost:${config.port} (health: /health)`,
-  );
+  console.log(`promptward gateway listening on http://localhost:${config.port} (health: /health)`);
 }

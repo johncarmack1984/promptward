@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import type { RequestsResponse } from "./types";
 import { loadRequests, type Source } from "./api";
 import { BrandMark } from "./components/primitives";
+import type { RequestsResponse } from "./types";
+import { CostSummary } from "./views/CostSummary";
 import { Detection } from "./views/Detection";
 import { RequestLog } from "./views/RequestLog";
-import { CostSummary } from "./views/CostSummary";
 import "./app.css";
 
 type Tab = "detection" | "log" | "cost";
@@ -14,6 +14,11 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "log", label: "requests" },
   { id: "cost", label: "cost" },
 ];
+
+// Stable keys for the loading placeholders (nothing reorders; keys just need
+// to not be the map index).
+const SKELETON_ROWS = Array.from({ length: 8 }, (_, i) => `row-${i}`);
+const SKELETON_CELLS = Array.from({ length: 4 }, (_, i) => `cell-${i}`);
 
 function LogSkeleton() {
   return (
@@ -28,8 +33,8 @@ function LogSkeleton() {
         <span className="r">latency</span>
         <span />
       </div>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div className="skrow skeleton" key={i} style={{ opacity: 1 - i * 0.08 }} />
+      {SKELETON_ROWS.map((k, i) => (
+        <div className="skrow skeleton" key={k} style={{ opacity: 1 - i * 0.08 }} />
       ))}
     </div>
   );
@@ -109,17 +114,27 @@ export default function App() {
 
         <span className="header__spacer" />
 
-        <span className="source-pill" data-source={source} title={
-          source === "live"
-            ? "connected to the gateway read API"
-            : "gateway not reachable -- showing bundled sample data"
-        }>
+        <span
+          className="source-pill"
+          data-source={source}
+          title={
+            source === "live"
+              ? "connected to the gateway read API"
+              : "gateway not reachable -- showing bundled sample data"
+          }
+        >
           <span className="dot" />
           {source === "live" ? "live gateway" : "sample data"}
         </span>
       </header>
 
-      <main className="main" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0}>
+      <main
+        className="main"
+        role="tabpanel"
+        id={`panel-${tab}`}
+        aria-labelledby={`tab-${tab}`}
+        tabIndex={0}
+      >
         {tab === "detection" ? <Detection /> : null}
 
         {tab === "log" ? (
@@ -159,8 +174,8 @@ export default function App() {
                 <p>loading</p>
               </div>
               <div className="strip">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div className="cell" key={i}>
+                {SKELETON_CELLS.map((k) => (
+                  <div className="cell" key={k}>
                     <div className="skeleton" style={{ height: 11, width: 64, marginBottom: 12 }} />
                     <div className="skeleton" style={{ height: 26, width: 90 }} />
                   </div>
