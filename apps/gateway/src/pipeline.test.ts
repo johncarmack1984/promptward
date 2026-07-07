@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { type Config, loadConfig } from "./config.js";
 import { handle, type ProviderAdapter, type ProviderResult, type ScanPart } from "./pipeline.js";
 import { applyRedactions } from "./providers/shared.js";
