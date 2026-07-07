@@ -95,36 +95,98 @@ static STRUCTURAL: Lazy<Vec<(Regex, &'static str, f64)>> = Lazy::new(|| {
         (r"(?i)<<\s*sys\s*>>", "system_tag", 0.70),
         (r"(?i)\[\s*system\s*\]", "system_tag", 0.55),
         // override of instructions / guidelines / role / safety
-        (r"(?i)\b(ignore|disregard|forget|bypass|override|skip)\b[^.\n]{0,40}\b(instruction|guideline|guardrail|rule|safety|content[ -]?polic|restriction|previous|prior|the above|everything (you|above)|your (previous )?(role|persona)|refus)", "instruction_override", 0.85),
+        (
+            r"(?i)\b(ignore|disregard|forget|bypass|override|skip)\b[^.\n]{0,40}\b(instruction|guideline|guardrail|rule|safety|content[ -]?polic|restriction|previous|prior|the above|everything (you|above)|your (previous )?(role|persona)|refus)",
+            "instruction_override",
+            0.85,
+        ),
         // "ignore the user / your task" -- the indirect-injection signature
-        (r"(?i)\b(ignore|disregard)\b[^.\n]{0,20}\b(the user|your task|this task|the (task|summary|translation|categoriz|request|question|instruction))", "ignore_task", 0.88),
+        (
+            r"(?i)\b(ignore|disregard)\b[^.\n]{0,20}\b(the user|your task|this task|the (task|summary|translation|categoriz|request|question|instruction))",
+            "ignore_task",
+            0.88,
+        ),
         // redirect: abandon the task and do something else instead
-        (r"(?i)\binstead\b[, ]{1,3}[^.\n]{0,15}\b(run|reply|output|send|forward|reveal|execute|email|delete|list|print|disclose)", "redirect_instead", 0.78),
+        (
+            r"(?i)\binstead\b[, ]{1,3}[^.\n]{0,15}\b(run|reply|output|send|forward|reveal|execute|email|delete|list|print|disclose)",
+            "redirect_instead",
+            0.78,
+        ),
         // supersede / override prior instructions
-        (r"(?i)\b(supersede|override)\b[^.\n]{0,20}\b(all )?(prior|previous|existing)\b", "instruction_override", 0.80),
+        (
+            r"(?i)\b(supersede|override)\b[^.\n]{0,20}\b(all )?(prior|previous|existing)\b",
+            "instruction_override",
+            0.80,
+        ),
         // exfiltrate the contents of a sensitive resource
-        (r"(?i)\bcontents? of\b[^.\n]{0,20}(\.env\b|/etc/passwd|id_rsa|the (database|vault|environment))", "exfil_instruction", 0.78),
+        (
+            r"(?i)\bcontents? of\b[^.\n]{0,20}(\.env\b|/etc/passwd|id_rsa|the (database|vault|environment))",
+            "exfil_instruction",
+            0.78,
+        ),
         // role reset / persona swap
-        (r"(?i)(from (now|here) on|you are (now|no longer)\b|new (persona|identity|directive)\b|stay in character|do anything now|developer mode)", "role_impersonation", 0.70),
+        (
+            r"(?i)(from (now|here) on|you are (now|no longer)\b|new (persona|identity|directive)\b|stay in character|do anything now|developer mode)",
+            "role_impersonation",
+            0.70,
+        ),
         // jailbreak / no-limits markers
-        (r"(?i)(no (content[ -]?polic|restriction|ethical limit|guideline|filter)|without (refus|restriction)|unfiltered|broken free|safety (guidelines? )?(do not|does not|don'?t) apply|ignore the guardrails|no longer (chatgpt|claude|bound by))", "jailbreak_marker", 0.72),
+        (
+            r"(?i)(no (content[ -]?polic|restriction|ethical limit|guideline|filter)|without (refus|restriction)|unfiltered|broken free|safety (guidelines? )?(do not|does not|don'?t) apply|ignore the guardrails|no longer (chatgpt|claude|bound by))",
+            "jailbreak_marker",
+            0.72,
+        ),
         // prompt / instruction extraction
-        (r"(?i)\b(reveal|repeat|print|output|show|disclose|leak|expose|give me|tell me)\b[^.\n]{0,40}\b((hidden|secret|initial|developer|system)[ -]?(prompt|instruction|config|message)|system\s+prompt|your\s+(initial\s+)?instructions|everything above)", "prompt_extraction", 0.85),
+        (
+            r"(?i)\b(reveal|repeat|print|output|show|disclose|leak|expose|give me|tell me)\b[^.\n]{0,40}\b((hidden|secret|initial|developer|system)[ -]?(prompt|instruction|config|message)|system\s+prompt|your\s+(initial\s+)?instructions|everything above)",
+            "prompt_extraction",
+            0.85,
+        ),
         // exfiltration command (verb + sensitive object)
-        (r"(?i)\b(forward|send|email|post|copy|upload|exfiltrate|leak|paste|append|disclose|list|reveal|output|expose)\b[^.\n]{0,45}\b(all (data|emails?|conversation|secret|note)|every (secret|note)|conversation history|the (customer )?database|api[ -]?key|credential|password|secret|\.env\b|/etc/passwd|id_rsa|environment variable|stored secret|audit log)", "exfil_instruction", 0.82),
+        (
+            r"(?i)\b(forward|send|email|post|copy|upload|exfiltrate|leak|paste|append|disclose|list|reveal|output|expose)\b[^.\n]{0,45}\b(all (data|emails?|conversation|secret|note)|every (secret|note)|conversation history|the (customer )?database|api[ -]?key|credential|password|secret|\.env\b|/etc/passwd|id_rsa|environment variable|stored secret|audit log)",
+            "exfil_instruction",
+            0.82,
+        ),
         // sensitive-file read
-        (r"(?i)\b(read|cat|fetch|access|open|print)\b[^.\n]{0,15}(\.env\b|/etc/passwd|/etc/shadow|id_rsa|\.ssh/)", "sensitive_file_read", 0.82),
+        (
+            r"(?i)\b(read|cat|fetch|access|open|print)\b[^.\n]{0,15}(\.env\b|/etc/passwd|/etc/shadow|id_rsa|\.ssh/)",
+            "sensitive_file_read",
+            0.82,
+        ),
         // exfiltrate to an external URL/endpoint
-        (r"(?i)\b(send|forward|post|copy|upload|email|exfiltrate)\b[^.\n]{0,45}\b(to|at)\b[^.\n]{0,25}https?://", "exfil_to_url", 0.78),
+        (
+            r"(?i)\b(send|forward|post|copy|upload|email|exfiltrate)\b[^.\n]{0,45}\b(to|at)\b[^.\n]{0,25}https?://",
+            "exfil_to_url",
+            0.78,
+        ),
         // authority laundering / privilege claims
-        (r"(?i)(the user is (an? )?(admin|administrator|developer|verified)|treat .{0,40}\bas (a )?(verified )?(admin|administrator)|i am the developer|i authorize|admin privileges|the user authorized|system override|disable confirmation|bypass confirmation|skip the (usual )?refusal)", "authority_laundering", 0.62),
+        (
+            r"(?i)(the user is (an? )?(admin|administrator|developer|verified)|treat .{0,40}\bas (a )?(verified )?(admin|administrator)|i am the developer|i authorize|admin privileges|the user authorized|system override|disable confirmation|bypass confirmation|skip the (usual )?refusal)",
+            "authority_laundering",
+            0.62,
+        ),
         // destructive command (often inside a decoded payload)
-        (r"(?i)\b(delete|drop|purge|wipe|destroy)\b[^.\n]{0,25}\b(all|every|the)\b[^.\n]{0,20}\b(record|table|log|file|customer|database|user|account)", "destructive_command", 0.70),
+        (
+            r"(?i)\b(delete|drop|purge|wipe|destroy)\b[^.\n]{0,25}\b(all|every|the)\b[^.\n]{0,20}\b(record|table|log|file|customer|database|user|account)",
+            "destructive_command",
+            0.70,
+        ),
         // markers wrapping an embedded directive
-        (r"(?i)(={2,}\s*ai instructions|assistant[ _-]?(instruction|directive)|system[ -]prompt[ -]update|new directive for the|\{\{\s*ai\s*:|<\s*instructions\s*>|assistant-instruction)", "embedded_directive", 0.78),
+        (
+            r"(?i)(={2,}\s*ai instructions|assistant[ _-]?(instruction|directive)|system[ -]prompt[ -]update|new directive for the|\{\{\s*ai\s*:|<\s*instructions\s*>|assistant-instruction)",
+            "embedded_directive",
+            0.78,
+        ),
     ];
     pats.iter()
-        .map(|(p, l, s)| (Regex::new(p).expect("static injection regex is valid"), *l, *s))
+        .map(|(p, l, s)| {
+            (
+                Regex::new(p).expect("static injection regex is valid"),
+                *l,
+                *s,
+            )
+        })
         .collect()
 });
 
@@ -193,10 +255,24 @@ fn meta_multiplier(text: &str, start: usize) -> f64 {
     1.0
 }
 
-fn emit(out: &mut Vec<Finding>, label: &str, base: f64, span: (usize, usize), text: &str, source: Source) {
+fn emit(
+    out: &mut Vec<Finding>,
+    label: &str,
+    base: f64,
+    span: (usize, usize),
+    text: &str,
+    source: Source,
+) {
     let score = (base * source_factor(source) * meta_multiplier(text, span.0)).clamp(0.0, 1.0);
     if score >= 0.10 {
-        out.push(Finding::new(Kind::Injection, label, severity(score), score, span, source));
+        out.push(Finding::new(
+            Kind::Injection,
+            label,
+            severity(score),
+            score,
+            span,
+            source,
+        ));
     }
 }
 
@@ -205,7 +281,14 @@ pub fn scan(text: &str, _direction: Direction, source: Source) -> Vec<Finding> {
     let mut out = Vec::new();
     for m in AC.find_iter(text) {
         let p = &PHRASES[m.pattern().as_usize()];
-        emit(&mut out, p.label, p.score, (m.start(), m.end()), text, source);
+        emit(
+            &mut out,
+            p.label,
+            p.score,
+            (m.start(), m.end()),
+            text,
+            source,
+        );
     }
     for (re, label, base) in STRUCTURAL.iter() {
         for m in re.find_iter(text) {
@@ -230,7 +313,9 @@ mod tests {
             Direction::Inbound,
             Source::User,
         );
-        assert!(f.iter().any(|x| x.kind == Kind::Injection && x.score >= 0.7));
+        assert!(f
+            .iter()
+            .any(|x| x.kind == Kind::Injection && x.score >= 0.7));
     }
 
     #[test]

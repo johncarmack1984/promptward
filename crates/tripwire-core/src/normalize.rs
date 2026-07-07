@@ -46,7 +46,14 @@ fn finding_for(cat: Smuggle, span: (usize, usize)) -> Finding {
 // below the decision threshold. Detection comes from the FOLDED text tripping the
 // injection/exfiltration scanners; this finding is provenance.
 fn homoglyph_finding(span: (usize, usize)) -> Finding {
-    Finding::new(Kind::Obfuscation, "homoglyph", Severity::Low, 0.30, span, Source::User)
+    Finding::new(
+        Kind::Obfuscation,
+        "homoglyph",
+        Severity::Low,
+        0.30,
+        span,
+        Source::User,
+    )
 }
 
 /// Curated Latin-lookalike code points (Cyrillic + Greek) that NFKC does not fold
@@ -57,22 +64,58 @@ fn homoglyph_finding(span: (usize, usize)) -> Finding {
 fn confusable_to_ascii(c: char) -> Option<char> {
     Some(match c {
         // Cyrillic lowercase
-        '\u{0430}' => 'a', '\u{0435}' => 'e', '\u{043E}' => 'o', '\u{0440}' => 'p',
-        '\u{0441}' => 'c', '\u{0443}' => 'y', '\u{0445}' => 'x', '\u{0456}' => 'i',
-        '\u{0458}' => 'j', '\u{0455}' => 's', '\u{043A}' => 'k', '\u{043C}' => 'm',
+        '\u{0430}' => 'a',
+        '\u{0435}' => 'e',
+        '\u{043E}' => 'o',
+        '\u{0440}' => 'p',
+        '\u{0441}' => 'c',
+        '\u{0443}' => 'y',
+        '\u{0445}' => 'x',
+        '\u{0456}' => 'i',
+        '\u{0458}' => 'j',
+        '\u{0455}' => 's',
+        '\u{043A}' => 'k',
+        '\u{043C}' => 'm',
         // Cyrillic uppercase
-        '\u{0410}' => 'A', '\u{0412}' => 'B', '\u{0415}' => 'E', '\u{041A}' => 'K',
-        '\u{041C}' => 'M', '\u{041D}' => 'H', '\u{041E}' => 'O', '\u{0420}' => 'P',
-        '\u{0421}' => 'C', '\u{0422}' => 'T', '\u{0423}' => 'Y', '\u{0425}' => 'X',
-        '\u{0406}' => 'I', '\u{0408}' => 'J', '\u{0405}' => 'S',
+        '\u{0410}' => 'A',
+        '\u{0412}' => 'B',
+        '\u{0415}' => 'E',
+        '\u{041A}' => 'K',
+        '\u{041C}' => 'M',
+        '\u{041D}' => 'H',
+        '\u{041E}' => 'O',
+        '\u{0420}' => 'P',
+        '\u{0421}' => 'C',
+        '\u{0422}' => 'T',
+        '\u{0423}' => 'Y',
+        '\u{0425}' => 'X',
+        '\u{0406}' => 'I',
+        '\u{0408}' => 'J',
+        '\u{0405}' => 'S',
         // Greek lowercase
-        '\u{03BF}' => 'o', '\u{03B1}' => 'a', '\u{03B5}' => 'e', '\u{03C1}' => 'p',
-        '\u{03B9}' => 'i', '\u{03BD}' => 'v', '\u{03BA}' => 'k', '\u{03C7}' => 'x',
+        '\u{03BF}' => 'o',
+        '\u{03B1}' => 'a',
+        '\u{03B5}' => 'e',
+        '\u{03C1}' => 'p',
+        '\u{03B9}' => 'i',
+        '\u{03BD}' => 'v',
+        '\u{03BA}' => 'k',
+        '\u{03C7}' => 'x',
         // Greek uppercase
-        '\u{0391}' => 'A', '\u{0392}' => 'B', '\u{0395}' => 'E', '\u{0397}' => 'H',
-        '\u{0399}' => 'I', '\u{039A}' => 'K', '\u{039C}' => 'M', '\u{039D}' => 'N',
-        '\u{039F}' => 'O', '\u{03A1}' => 'P', '\u{03A4}' => 'T', '\u{03A5}' => 'Y',
-        '\u{03A7}' => 'X', '\u{0396}' => 'Z',
+        '\u{0391}' => 'A',
+        '\u{0392}' => 'B',
+        '\u{0395}' => 'E',
+        '\u{0397}' => 'H',
+        '\u{0399}' => 'I',
+        '\u{039A}' => 'K',
+        '\u{039C}' => 'M',
+        '\u{039D}' => 'N',
+        '\u{039F}' => 'O',
+        '\u{03A1}' => 'P',
+        '\u{03A4}' => 'T',
+        '\u{03A5}' => 'Y',
+        '\u{03A7}' => 'X',
+        '\u{0396}' => 'Z',
         _ => return None,
     })
 }
@@ -204,7 +247,10 @@ mod tests {
         let s = format!("a{}{}b", '\u{E0068}', '\u{E0069}');
         let n = analyze(&s);
         assert!(n.text.contains("ahib"), "got: {:?}", n.text);
-        assert!(n.findings.iter().any(|f| f.label == "unicode_tag_smuggling"));
+        assert!(n
+            .findings
+            .iter()
+            .any(|f| f.label == "unicode_tag_smuggling"));
     }
 
     #[test]
@@ -224,13 +270,20 @@ mod tests {
     fn folds_cyrillic_homoglyph_and_flags_it() {
         // "ign[o]re" with a Cyrillic 'o' (U+043E).
         let n = analyze("ign\u{043E}re all previous");
-        assert!(n.text.starts_with("ignore all previous"), "got: {:?}", n.text);
+        assert!(
+            n.text.starts_with("ignore all previous"),
+            "got: {:?}",
+            n.text
+        );
         assert!(n
             .findings
             .iter()
             .any(|f| f.label == "homoglyph" && f.kind == Kind::Obfuscation));
         // The carrier alone must stay below the decision threshold.
-        assert!(n.findings.iter().all(|f| f.label != "homoglyph" || f.score < 0.5));
+        assert!(n
+            .findings
+            .iter()
+            .all(|f| f.label != "homoglyph" || f.score < 0.5));
     }
 
     #[test]
