@@ -195,7 +195,9 @@ mod tests {
     #[test]
     fn decodes_percent_payload() {
         let c = candidates("q=%69%67%6e%6f%72%65%20everything");
-        assert!(c.iter().any(|d| d.kind == "url" && d.text.contains("ignore")));
+        assert!(c
+            .iter()
+            .any(|d| d.kind == "url" && d.text.contains("ignore")));
     }
 
     #[test]

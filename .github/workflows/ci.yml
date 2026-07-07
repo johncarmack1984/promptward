@@ -42,7 +42,9 @@ jobs:
       - name: Build detection core (napi addon)
         run: pnpm core:build
 
-      - name: Clippy
+      - name: rustfmt (check)
+        run: cargo fmt --all --check
+      - name: Clippy (zero warnings)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Rust unit tests

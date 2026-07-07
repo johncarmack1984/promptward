@@ -24,22 +24,76 @@ struct Sig {
 
 static SIGS: Lazy<Vec<Sig>> = Lazy::new(|| {
     vec![
-        Sig { re: Regex::new(r"AKIA[0-9A-Z]{16}").unwrap(), label: "aws_access_key", score: 0.95, sev: Severity::Critical },
-        Sig { re: Regex::new(r"gh[pousr]_[A-Za-z0-9]{20,}").unwrap(), label: "github_token", score: 0.95, sev: Severity::Critical },
+        Sig {
+            re: Regex::new(r"AKIA[0-9A-Z]{16}").unwrap(),
+            label: "aws_access_key",
+            score: 0.95,
+            sev: Severity::Critical,
+        },
+        Sig {
+            re: Regex::new(r"gh[pousr]_[A-Za-z0-9]{20,}").unwrap(),
+            label: "github_token",
+            score: 0.95,
+            sev: Severity::Critical,
+        },
         // OpenAI/Anthropic keys. Two shapes, both requiring a long high-entropy
         // body so hyphenated identifiers ("sk-learn-classifier-module") do not
         // match: (1) the structured prefixes sk-ant-api03-/sk-proj- whose base64url
         // body may contain - and _, (2) a bare sk- (optionally sk-ant-) followed by
         // a 20+ contiguous alphanumeric run. The old `[A-Za-z0-9_-]{16,}` body let
         // short hyphen-joined words through.
-        Sig { re: Regex::new(r"sk-(?:ant-api\d\d|proj)-[A-Za-z0-9_\-]{20,}").unwrap(), label: "llm_api_key", score: 0.95, sev: Severity::Critical },
-        Sig { re: Regex::new(r"sk-(?:ant-)?[A-Za-z0-9]{20,}").unwrap(), label: "llm_api_key", score: 0.95, sev: Severity::Critical },
-        Sig { re: Regex::new(r"AIza[0-9A-Za-z_\-]{35}").unwrap(), label: "google_api_key", score: 0.90, sev: Severity::High },
-        Sig { re: Regex::new(r"xox[baprs]-[A-Za-z0-9-]{10,}").unwrap(), label: "slack_token", score: 0.90, sev: Severity::High },
-        Sig { re: Regex::new(r"(?i)(postgres|postgresql|mysql|mongodb|redis|amqp|ftp)://[^\s:@/]+:[^\s:@/]+@").unwrap(), label: "credential_in_url", score: 0.85, sev: Severity::Critical },
-        Sig { re: Regex::new(r"eyJ[A-Za-z0-9_\-]{8,}\.eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{6,}").unwrap(), label: "jwt", score: 0.80, sev: Severity::High },
-        Sig { re: Regex::new(r"-----BEGIN [A-Z ]{0,24}PRIVATE KEY-----").unwrap(), label: "private_key_pem", score: 0.95, sev: Severity::Critical },
-        Sig { re: Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap(), label: "us_ssn", score: 0.80, sev: Severity::High },
+        Sig {
+            re: Regex::new(r"sk-(?:ant-api\d\d|proj)-[A-Za-z0-9_\-]{20,}").unwrap(),
+            label: "llm_api_key",
+            score: 0.95,
+            sev: Severity::Critical,
+        },
+        Sig {
+            re: Regex::new(r"sk-(?:ant-)?[A-Za-z0-9]{20,}").unwrap(),
+            label: "llm_api_key",
+            score: 0.95,
+            sev: Severity::Critical,
+        },
+        Sig {
+            re: Regex::new(r"AIza[0-9A-Za-z_\-]{35}").unwrap(),
+            label: "google_api_key",
+            score: 0.90,
+            sev: Severity::High,
+        },
+        Sig {
+            re: Regex::new(r"xox[baprs]-[A-Za-z0-9-]{10,}").unwrap(),
+            label: "slack_token",
+            score: 0.90,
+            sev: Severity::High,
+        },
+        Sig {
+            re: Regex::new(
+                r"(?i)(postgres|postgresql|mysql|mongodb|redis|amqp|ftp)://[^\s:@/]+:[^\s:@/]+@",
+            )
+            .unwrap(),
+            label: "credential_in_url",
+            score: 0.85,
+            sev: Severity::Critical,
+        },
+        Sig {
+            re: Regex::new(r"eyJ[A-Za-z0-9_\-]{8,}\.eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{6,}")
+                .unwrap(),
+            label: "jwt",
+            score: 0.80,
+            sev: Severity::High,
+        },
+        Sig {
+            re: Regex::new(r"-----BEGIN [A-Z ]{0,24}PRIVATE KEY-----").unwrap(),
+            label: "private_key_pem",
+            score: 0.95,
+            sev: Severity::Critical,
+        },
+        Sig {
+            re: Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap(),
+            label: "us_ssn",
+            score: 0.80,
+            sev: Severity::High,
+        },
     ]
 });
 
@@ -48,13 +102,16 @@ static EMAIL: Lazy<Regex> =
 static AWS_SECRET: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Za-z0-9/+]{40}").unwrap());
 static CARD: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9](?:[ -]?[0-9]){12,18}").unwrap());
 static SSN: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap());
-static PHONE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b|\b555-\d{4}\b").unwrap());
+static PHONE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b|\b555-\d{4}\b").unwrap()
+});
 static DATE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\b(?:19|20)\d{2}-\d{2}-\d{2}\b|\b\d{2}/\d{2}/\d{4}\b").unwrap());
 static ADDRESS: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\b\d{1,5}\s+[A-Z][a-z]+\s+(?:Ave|Avenue|St|Street|Rd|Road|Blvd|Lane|Ln|Dr|Drive|Way)\b")
-        .unwrap()
+    Regex::new(
+        r"\b\d{1,5}\s+[A-Z][a-z]+\s+(?:Ave|Avenue|St|Street|Rd|Road|Blvd|Lane|Ln|Dr|Drive|Way)\b",
+    )
+    .unwrap()
 });
 
 fn luhn(digits: &[u8]) -> bool {
@@ -118,8 +175,14 @@ pub fn scan(text: &str, direction: Direction, source: Source) -> Vec<Finding> {
     // and is not part of a longer digit string (which would be an id, not a PAN).
     for m in CARD.find_iter(text) {
         let (bs, be) = (m.start(), m.end());
-        let prev_digit = text[..bs].chars().last().is_some_and(|c| c.is_ascii_digit());
-        let next_digit = text[be..].chars().next().is_some_and(|c| c.is_ascii_digit());
+        let prev_digit = text[..bs]
+            .chars()
+            .last()
+            .is_some_and(|c| c.is_ascii_digit());
+        let next_digit = text[be..]
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_digit());
         if prev_digit || next_digit {
             continue;
         }
@@ -185,7 +248,8 @@ mod tests {
     use super::*;
 
     fn has(f: &[Finding], label: &str) -> bool {
-        f.iter().any(|x| x.label == label && x.kind == Kind::Exfiltration)
+        f.iter()
+            .any(|x| x.label == label && x.kind == Kind::Exfiltration)
     }
     fn max_score(f: &[Finding]) -> f64 {
         f.iter().map(|x| x.score).fold(0.0, f64::max)
@@ -205,30 +269,55 @@ mod tests {
     #[test]
     fn flags_tokens_and_pem() {
         assert!(has(
-            &scan("ghp_EXAMPLE0000000000000000000000000000", Direction::Inbound, Source::User),
+            &scan(
+                "ghp_EXAMPLE0000000000000000000000000000",
+                Direction::Inbound,
+                Source::User
+            ),
             "github_token",
         ));
         assert!(has(
-            &scan("sk-ant-EXAMPLE000000000000000000000000000000000000000000", Direction::Outbound, Source::ModelOutput),
+            &scan(
+                "sk-ant-EXAMPLE000000000000000000000000000000000000000000",
+                Direction::Outbound,
+                Source::ModelOutput
+            ),
             "llm_api_key",
         ));
         assert!(has(
-            &scan("-----BEGIN PRIVATE KEY-----\nFAKEKEYFAKEKEY\n-----END PRIVATE KEY-----", Direction::Inbound, Source::User),
+            &scan(
+                "-----BEGIN PRIVATE KEY-----\nFAKEKEYFAKEKEY\n-----END PRIVATE KEY-----",
+                Direction::Inbound,
+                Source::User
+            ),
             "private_key_pem",
         ));
     }
 
     #[test]
     fn flags_ssn_and_valid_card_only() {
-        assert!(has(&scan("SSN 123-45-6789", Direction::Inbound, Source::User), "us_ssn"));
-        assert!(has(&scan("card 4111 1111 1111 1111", Direction::Inbound, Source::User), "credit_card"));
+        assert!(has(
+            &scan("SSN 123-45-6789", Direction::Inbound, Source::User),
+            "us_ssn"
+        ));
+        assert!(has(
+            &scan("card 4111 1111 1111 1111", Direction::Inbound, Source::User),
+            "credit_card"
+        ));
         // One digit changed -> fails Luhn -> not a card.
-        assert!(!has(&scan("num 4111 1111 1111 1112", Direction::Inbound, Source::User), "credit_card"));
+        assert!(!has(
+            &scan("num 4111 1111 1111 1112", Direction::Inbound, Source::User),
+            "credit_card"
+        ));
     }
 
     #[test]
     fn code_variable_name_is_not_a_secret() {
-        let f = scan("const apiKey = process.env.API_KEY;", Direction::Inbound, Source::User);
+        let f = scan(
+            "const apiKey = process.env.API_KEY;",
+            Direction::Inbound,
+            Source::User,
+        );
         assert!(max_score(&f) < 0.5, "got {}", max_score(&f));
     }
 
@@ -262,7 +351,11 @@ mod tests {
     #[test]
     fn flags_anthropic_key_with_hyphens() {
         assert!(has(
-            &scan("reuse sk-ant-api03-EXAMPLE00000000000000000000000000000000", Direction::Inbound, Source::User),
+            &scan(
+                "reuse sk-ant-api03-EXAMPLE00000000000000000000000000000000",
+                Direction::Inbound,
+                Source::User
+            ),
             "llm_api_key",
         ));
     }
@@ -284,11 +377,19 @@ mod tests {
     #[test]
     fn flags_bare_and_project_keys() {
         assert!(has(
-            &scan("token sk-EXAMPLE00000000000000000000000000000000000000000000", Direction::Inbound, Source::User),
+            &scan(
+                "token sk-EXAMPLE00000000000000000000000000000000000000000000",
+                Direction::Inbound,
+                Source::User
+            ),
             "llm_api_key",
         ));
         assert!(has(
-            &scan("token sk-proj-EXAMPLE000000000000000000000000-_aBcD", Direction::Inbound, Source::User),
+            &scan(
+                "token sk-proj-EXAMPLE000000000000000000000000-_aBcD",
+                Direction::Inbound,
+                Source::User
+            ),
             "llm_api_key",
         ));
     }
@@ -296,7 +397,11 @@ mod tests {
     #[test]
     fn flags_connection_string_credentials() {
         assert!(has(
-            &scan("conn postgres://admin:hunter2@db.internal.test:5432/prod", Direction::Inbound, Source::User),
+            &scan(
+                "conn postgres://admin:hunter2@db.internal.test:5432/prod",
+                Direction::Inbound,
+                Source::User
+            ),
             "credential_in_url",
         ));
     }
