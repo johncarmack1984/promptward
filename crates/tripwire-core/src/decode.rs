@@ -19,9 +19,11 @@ pub struct Decoded {
     pub kind: &'static str,
 }
 
-static BASE64_RUN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Za-z0-9+/]{16,}={0,2}").unwrap());
-static HEX_RUN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9a-fA-F]{32,}").unwrap());
-static PERCENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"(%[0-9A-Fa-f]{2})+").unwrap());
+static BASE64_RUN: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[A-Za-z0-9+/]{16,}={0,2}").expect("literal regex"));
+static HEX_RUN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9a-fA-F]{32,}").expect("literal regex"));
+static PERCENT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(%[0-9A-Fa-f]{2})+").expect("literal regex"));
 
 /// Fraction of bytes that are printable ASCII or common whitespace.
 fn printable_ratio(bytes: &[u8]) -> f32 {

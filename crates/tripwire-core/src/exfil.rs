@@ -25,13 +25,13 @@ struct Sig {
 static SIGS: Lazy<Vec<Sig>> = Lazy::new(|| {
     vec![
         Sig {
-            re: Regex::new(r"AKIA[0-9A-Z]{16}").unwrap(),
+            re: Regex::new(r"AKIA[0-9A-Z]{16}").expect("literal regex"),
             label: "aws_access_key",
             score: 0.95,
             sev: Severity::Critical,
         },
         Sig {
-            re: Regex::new(r"gh[pousr]_[A-Za-z0-9]{20,}").unwrap(),
+            re: Regex::new(r"gh[pousr]_[A-Za-z0-9]{20,}").expect("literal regex"),
             label: "github_token",
             score: 0.95,
             sev: Severity::Critical,
@@ -43,25 +43,25 @@ static SIGS: Lazy<Vec<Sig>> = Lazy::new(|| {
         // a 20+ contiguous alphanumeric run. The old `[A-Za-z0-9_-]{16,}` body let
         // short hyphen-joined words through.
         Sig {
-            re: Regex::new(r"sk-(?:ant-api\d\d|proj)-[A-Za-z0-9_\-]{20,}").unwrap(),
+            re: Regex::new(r"sk-(?:ant-api\d\d|proj)-[A-Za-z0-9_\-]{20,}").expect("literal regex"),
             label: "llm_api_key",
             score: 0.95,
             sev: Severity::Critical,
         },
         Sig {
-            re: Regex::new(r"sk-(?:ant-)?[A-Za-z0-9]{20,}").unwrap(),
+            re: Regex::new(r"sk-(?:ant-)?[A-Za-z0-9]{20,}").expect("literal regex"),
             label: "llm_api_key",
             score: 0.95,
             sev: Severity::Critical,
         },
         Sig {
-            re: Regex::new(r"AIza[0-9A-Za-z_\-]{35}").unwrap(),
+            re: Regex::new(r"AIza[0-9A-Za-z_\-]{35}").expect("literal regex"),
             label: "google_api_key",
             score: 0.90,
             sev: Severity::High,
         },
         Sig {
-            re: Regex::new(r"xox[baprs]-[A-Za-z0-9-]{10,}").unwrap(),
+            re: Regex::new(r"xox[baprs]-[A-Za-z0-9-]{10,}").expect("literal regex"),
             label: "slack_token",
             score: 0.90,
             sev: Severity::High,
@@ -70,26 +70,26 @@ static SIGS: Lazy<Vec<Sig>> = Lazy::new(|| {
             re: Regex::new(
                 r"(?i)(postgres|postgresql|mysql|mongodb|redis|amqp|ftp)://[^\s:@/]+:[^\s:@/]+@",
             )
-            .unwrap(),
+            .expect("literal regex"),
             label: "credential_in_url",
             score: 0.85,
             sev: Severity::Critical,
         },
         Sig {
             re: Regex::new(r"eyJ[A-Za-z0-9_\-]{8,}\.eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{6,}")
-                .unwrap(),
+                .expect("literal regex"),
             label: "jwt",
             score: 0.80,
             sev: Severity::High,
         },
         Sig {
-            re: Regex::new(r"-----BEGIN [A-Z ]{0,24}PRIVATE KEY-----").unwrap(),
+            re: Regex::new(r"-----BEGIN [A-Z ]{0,24}PRIVATE KEY-----").expect("literal regex"),
             label: "private_key_pem",
             score: 0.95,
             sev: Severity::Critical,
         },
         Sig {
-            re: Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap(),
+            re: Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").expect("literal regex"),
             label: "us_ssn",
             score: 0.80,
             sev: Severity::High,
@@ -97,21 +97,27 @@ static SIGS: Lazy<Vec<Sig>> = Lazy::new(|| {
     ]
 });
 
-static EMAIL: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}").unwrap());
-static AWS_SECRET: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Za-z0-9/+]{40}").unwrap());
-static CARD: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9](?:[ -]?[0-9]){12,18}").unwrap());
-static SSN: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").unwrap());
-static PHONE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b|\b555-\d{4}\b").unwrap()
+static EMAIL: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}").expect("literal regex")
 });
-static DATE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\b(?:19|20)\d{2}-\d{2}-\d{2}\b|\b\d{2}/\d{2}/\d{4}\b").unwrap());
+static AWS_SECRET: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[A-Za-z0-9/+]{40}").expect("literal regex"));
+static CARD: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[0-9](?:[ -]?[0-9]){12,18}").expect("literal regex"));
+static SSN: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").expect("literal regex"));
+static PHONE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b|\b555-\d{4}\b")
+        .expect("literal regex")
+});
+static DATE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\b(?:19|20)\d{2}-\d{2}-\d{2}\b|\b\d{2}/\d{2}/\d{4}\b").expect("literal regex")
+});
 static ADDRESS: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
         r"\b\d{1,5}\s+[A-Z][a-z]+\s+(?:Ave|Avenue|St|Street|Rd|Road|Blvd|Lane|Ln|Dr|Drive|Way)\b",
     )
-    .unwrap()
+    .expect("literal regex")
 });
 
 fn luhn(digits: &[u8]) -> bool {

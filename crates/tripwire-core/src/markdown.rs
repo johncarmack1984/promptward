@@ -12,10 +12,12 @@ use regex::Regex;
 
 use crate::types::{Direction, Finding, Kind, Severity, Source};
 
-static URL: Lazy<Regex> = Lazy::new(|| Regex::new(r"https?://[^\s)\]<>]+").unwrap());
-static LONG_TOKEN: Lazy<Regex> = Lazy::new(|| Regex::new(r"[A-Za-z0-9+/_=-]{16,}").unwrap());
+static URL: Lazy<Regex> = Lazy::new(|| Regex::new(r"https?://[^\s)\]<>]+").expect("literal regex"));
+static LONG_TOKEN: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[A-Za-z0-9+/_=-]{16,}").expect("literal regex"));
 static SECRET_IN_URL: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{16,}|sk-(?:ant-)?[A-Za-z0-9]{16,}").unwrap()
+    Regex::new(r"AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{16,}|sk-(?:ant-)?[A-Za-z0-9]{16,}")
+        .expect("literal regex")
 });
 
 const ALLOWED: &[&str] = &[

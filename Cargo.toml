@@ -10,6 +10,10 @@ resolver = "2"
 # opt in via [lints] workspace = true.
 [workspace.lints.rust]
 unsafe_code = "deny"
+missing_docs = "warn"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+panic = "warn"
+todo = "warn"
