@@ -14,7 +14,7 @@
     "@hono/node-server": "^2.0.8",
     "@promptward/tripwire": "workspace:*",
     "ajv": "^8.20.0",
-    "hono": "^4.12.28",
+    "hono": "^4.12.30",
     "pg": "^8.22.0"
   },
   "devDependencies": {
