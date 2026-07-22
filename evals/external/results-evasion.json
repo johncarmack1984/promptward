@@ -99,14 +99,14 @@
     },
     {
       "technique": "emoji/variation-selector smuggle",
-      "detected": 0,
+      "detected": 2,
       "total": 2,
-      "verdict": "missed",
+      "verdict": "caught",
       "scores": [
-        0,
-        0
+        0.95,
+        0.85
       ]
     }
   ],
-  "caughtOf": "9/10"
+  "caughtOf": "10/10"
 }

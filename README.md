@@ -49,7 +49,7 @@ The corpus above is one we wrote, so it also runs the **same detector over publi
 | [Gandalf](https://huggingface.co/datasets/Lakera/gandalf_ignore_instructions) (1000, all-attack) | recall 61.2% -- catches the override-phrased half, misses pure social-engineering extraction |
 | [safe-guard](https://huggingface.co/datasets/xTRam1/safe-guard-prompt-injection) test (2060) | recall 32.5%, precision 99.5%, FP 0.1% |
 | [NotInject](https://huggingface.co/datasets/leolee99/NotInject) (339, over-defense) | 0.9% false positives -- the near-zero-FP claim holds on adversarial-benign text |
-| Evasion suite ([arXiv:2504.11168](https://arxiv.org/abs/2504.11168)) | 9/10 techniques caught; honest miss on emoji / variation-selector smuggling (a tracked, shippable fix) |
+| Evasion suite ([arXiv:2504.11168](https://arxiv.org/abs/2504.11168)) | 10/10 techniques caught, including the emoji / variation-selector smuggle that beat commercial detectors -- a gap this suite found and a follow-up closed |
 
 The takeaway is deliberate: **precision and low false-alarm generalize** (they hold on out-of-distribution and adversarial-benign sets), while **recall is scoped** to the override / smuggling / exfil patterns the detector targets. That is the correct trade for a $0, microsecond checkpoint you run in front of a model -- and pair with an LLM-judge for the fuzzy tail. Full per-dataset breakdown, failure analysis, and the PINT-unavailable note are in [`evals/external/README.md`](evals/external/README.md).
 

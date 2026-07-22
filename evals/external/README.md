@@ -45,9 +45,11 @@ Modeled on [Hackett et al., 2025, "Bypassing LLM Guardrails"](https://arxiv.org/
 | bidi (RLO) wrap | caught |
 | unicode-tag block | caught |
 | homoglyph (Cyrillic) | caught |
-| **emoji / variation-selector smuggle** | **MISSED** |
+| emoji / variation-selector smuggle | caught |
 
-**Caught 9 of 10.** promptward's decode-then-rescan and unicode-normalization passes catch every encoded and character-injection variant tested -- including tag-block and homoglyph tricks that defeat detectors relying on a single tokenizer. The one honest miss is the paper's most effective technique: **emoji / variation-selector smuggling**, where the payload rides in invisible Unicode variation selectors (`U+FE00-FE0F`, `U+E0100-E01EF`) after a carrier emoji. `tripwire-core`'s `smuggle_of` covers zero-width, bidi, and the Tags block, but not the variation-selector ranges, so the payload is never revealed and the scan returns clean. This is the same failure mode that beat Azure Prompt Shield -- and it is a precise, shippable fix: extend `smuggle_of` (and the reveal path) in `crates/tripwire-core/src/normalize.rs` to strip/decode variation selectors, then this row flips to `caught` and the internal unicode-smuggling corpus gains a variation-selector case. Tracked as a roadmap item; not yet claimed as covered.
+**Caught 10 of 10.** promptward's decode-then-rescan and unicode-normalization passes catch every encoded and character-injection variant tested -- including tag-block and homoglyph tricks that defeat detectors relying on a single tokenizer.
+
+The tenth was found honest before it was fixed, and that loop is the point. The paper's most effective technique -- **emoji / variation-selector smuggling**, where the payload rides in invisible Unicode variation selectors (`U+FE00-FE0F`, `U+E0100-E01EF`) after a carrier emoji, the same technique that beat Azure Prompt Shield -- was initially a clean miss: the scan returned nothing because the selectors were never decoded. This suite surfaced it, and the fix is a decode-then-rescan of the variation-selector ranges (`vs_candidates` in `crates/tripwire-core/src/decode.rs`), treating a run of selectors as an encoding like base64/hex: recover one byte per selector, and if the run decodes to text, re-scan it. A single variation selector (an emoji-presentation or CJK IVS selector in ordinary text) is below the run threshold and non-textual, so benign emoji stay clean -- confirmed by the unchanged NotInject and internal-corpus false-positive rates after the fix. Regression-guarded by unit tests in `decode.rs` and `lib.rs`.
 
 ## Not runnable: PINT
 
