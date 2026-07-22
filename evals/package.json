@@ -5,7 +5,9 @@
   "type": "module",
   "description": "Eval harness: runs the detectors over labeled datasets and reports precision / recall / F1 per attack class. This is the credibility centerpiece -- the README's numbers come from here.",
   "scripts": {
-    "eval": "tsx run.ts"
+    "eval": "tsx run.ts",
+    "eval:external": "tsx external/run-external.ts",
+    "eval:evasion": "tsx external/evasion.ts"
   },
   "dependencies": {
     "@promptward/tripwire": "workspace:*"
