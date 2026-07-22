@@ -39,6 +39,20 @@ Recall by attack class:
 
 Methodology: pure-Rust deterministic scan (no network), decision threshold 0.5, hand-curated corpus (every secret is a documentation/fake value), scores calibrated on the same corpus they are measured on (no held-out split). Static corpora overstate robustness, so these numbers are for THIS corpus at its current size -- run `pnpm eval` to reproduce them exactly. A 3-class confusion matrix (`metrics.confusion3`) ships alongside: every benign example lands in the clean column (zero benign misfires), and the single per-class "false positive" is a cross-class attack row, not a benign one. The benign false-positive rate is operational -- 4 benign rows produce only sub-threshold informational findings that drive no action (`metrics.benignAnyFinding`). The full caveat list ships in `evals/results.json` under `metrics.caveats`.
 
+## On third-party benchmarks
+
+The corpus above is one we wrote, so it also runs the **same detector over public prompt-injection benchmarks it was never tuned on** -- and reports the honest numbers, including where it does poorly ([`evals/external/`](evals/external/README.md), `pnpm eval:external`). The short version: promptward's tripwire is a **precision-first deterministic pre-filter, not a broad ML classifier**, and the external data shows exactly that shape.
+
+| Public benchmark | Result |
+|---|---|
+| [deepset/prompt-injections](https://huggingface.co/datasets/deepset/prompt-injections) (662) | recall 8.7%, precision 92.0%, FP 0.5% -- low recall on a set that is ~38% German and dominated by roleplay jailbreaks (out of taxonomy) |
+| [Gandalf](https://huggingface.co/datasets/Lakera/gandalf_ignore_instructions) (1000, all-attack) | recall 61.2% -- catches the override-phrased half, misses pure social-engineering extraction |
+| [safe-guard](https://huggingface.co/datasets/xTRam1/safe-guard-prompt-injection) test (2060) | recall 32.5%, precision 99.5%, FP 0.1% |
+| [NotInject](https://huggingface.co/datasets/leolee99/NotInject) (339, over-defense) | 0.9% false positives -- the near-zero-FP claim holds on adversarial-benign text |
+| Evasion suite ([arXiv:2504.11168](https://arxiv.org/abs/2504.11168)) | 9/10 techniques caught; honest miss on emoji / variation-selector smuggling (a tracked, shippable fix) |
+
+The takeaway is deliberate: **precision and low false-alarm generalize** (they hold on out-of-distribution and adversarial-benign sets), while **recall is scoped** to the override / smuggling / exfil patterns the detector targets. That is the correct trade for a $0, microsecond checkpoint you run in front of a model -- and pair with an LLM-judge for the fuzzy tail. Full per-dataset breakdown, failure analysis, and the PINT-unavailable note are in [`evals/external/README.md`](evals/external/README.md).
+
 ## Why this exists
 
 Most teams shipping LLM features have the same two unsolved problems: untrusted text reaching the model (injection) and sensitive data leaving in a prompt or response (exfiltration) -- with no measured handle on either. The 2026 attack surface is not 2024's "ignore your instructions": it's indirect injection hidden in fetched documents and tool output, malicious instructions planted in MCP tool descriptions, invisible unicode-tag smuggling, and markdown-image links that exfiltrate data with zero tool calls. promptward puts a thin, fast checkpoint in front of the model that handles those -- and ships the evals that say how well it works.

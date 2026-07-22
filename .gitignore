@@ -15,6 +15,9 @@ crates/tripwire-core/browser.js
 # generated: dashboard's copy of the eval artifact (synced from evals/results.json)
 apps/dashboard/src/data/results.json
 
+# external-benchmark raw data (fetched from HF, re-fetchable; not redistributed)
+evals/external/.cache/
+
 # env / secrets
 .env
 .env.*

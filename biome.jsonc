@@ -9,7 +9,10 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**"]
+    // Generated eval artifacts: written by the eval harnesses via
+    // JSON.stringify(.., 2), whose array style biome's formatter would rewrite
+    // (and the next eval run would rewrite back). Not biome's to own.
+    "includes": ["**", "!evals/results.json", "!evals/external/results-*.json"]
   },
   "formatter": {
     "enabled": true,

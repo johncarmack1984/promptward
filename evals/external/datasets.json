@@ -1,0 +1,66 @@
+{
+  "note": "External, third-party prompt-injection benchmarks the field cites. Each entry is fetched from the HuggingFace datasets-server, cached under .cache/ (gitignored), and scored by the same tripwire-core detector the internal eval uses. Revisions are the dataset commit shas pinned at measurement time (2026-07-22) so a re-run hits the same data; pass --refresh to re-fetch.",
+  "threshold": 0.5,
+  "datasets": [
+    {
+      "name": "deepset",
+      "title": "deepset/prompt-injections",
+      "hf": "deepset/prompt-injections",
+      "revision": "4f61ecb038e9c3fb77e21034b22511b523772cdd",
+      "license": "Apache-2.0",
+      "config": "default",
+      "splits": ["train", "test"],
+      "textField": "text",
+      "attack": { "field": "label", "equals": 1 },
+      "measures": "precision/recall/FP/F1",
+      "cite": "Canonical academic binary injection set (EN + DE). ~38% of the injection rows are German; the injection class is dominated by roleplay / persona / context-switch prompts."
+    },
+    {
+      "name": "gandalf",
+      "title": "Lakera/gandalf_ignore_instructions",
+      "hf": "Lakera/gandalf_ignore_instructions",
+      "revision": "04737b65e90a6794ec227012e4a255a7def6344b",
+      "license": "MIT",
+      "config": "default",
+      "splits": ["train", "validation", "test"],
+      "textField": "text",
+      "attack": { "all": true },
+      "measures": "recall",
+      "cite": "Real prompts that successfully extracted the password from Lakera's Gandalf game. All-attack, so this measures recall only -- a mix of instruction-override and pure social-engineering extraction."
+    },
+    {
+      "name": "safeguard",
+      "title": "xTRam1/safe-guard-prompt-injection (test split)",
+      "hf": "xTRam1/safe-guard-prompt-injection",
+      "revision": "a3a877d608f37b7d20d9945671902df895ecdb46",
+      "license": "Apache-2.0",
+      "config": "default",
+      "splits": ["test"],
+      "textField": "text",
+      "attack": { "field": "label", "equals": 1 },
+      "measures": "precision/recall/FP/F1",
+      "cite": "Held-out test split of a larger binary injection set. A second, independent, larger precision/recall probe."
+    },
+    {
+      "name": "notinject",
+      "title": "leolee99/NotInject (over-defense set)",
+      "hf": "leolee99/NotInject",
+      "revision": "847ae76cf8fea5ed325429e569ae8cfef022d2e0",
+      "license": "MIT",
+      "config": "default",
+      "splits": ["NotInject_one", "NotInject_two", "NotInject_three"],
+      "textField": "prompt",
+      "attack": { "all": false },
+      "measures": "FP-rate",
+      "cite": "Benign prompts built to contain injection trigger words, designed to measure over-defense (false positives). All-benign, so this stress-tests the near-zero-false-positive claim against adversarial negatives."
+    }
+  ],
+  "unavailable": [
+    {
+      "name": "PINT",
+      "title": "Lakera PINT Benchmark",
+      "reason": "The PINT test set (4,314 inputs) is intentionally NOT publicly released -- Lakera keeps it private so detectors cannot train on it. The github.com/lakeraai/pint-benchmark repo ships the harness but not the data (request-gated). We do not fabricate a PINT score. For context only, Lakera's published leaderboard reports deepset's DeBERTa-v3 injection model around 62% and Lakera Guard around 92.5% on PINT.",
+      "source": "https://github.com/lakeraai/pint-benchmark"
+    }
+  ]
+}
