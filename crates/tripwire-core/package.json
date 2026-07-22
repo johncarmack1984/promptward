@@ -24,6 +24,6 @@
     "build:debug": "napi build --platform --features node"
   },
   "devDependencies": {
-    "@napi-rs/cli": "3.7.3"
+    "@napi-rs/cli": "3.7.4"
   }
 }
