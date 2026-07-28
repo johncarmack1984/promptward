@@ -17,6 +17,10 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_GHA_ENABLED: "true"
+      CARGO_INCREMENTAL: "0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -29,6 +33,14 @@ jobs:
           cache: pnpm
 
       - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          cache: "false"
+
+      - uses: mozilla-actions/sccache-action@9e7fa8a12102821edf02ca5dbea1acd0f89a2696 # v0.0.10
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          cache-targets: "false"
 
       - name: Install
         # Dependabot bumps package.json but does not regenerate pnpm-lock.yaml,
@@ -78,6 +90,10 @@ jobs:
 
       - name: Dashboard build
         run: pnpm --filter @promptward/dashboard build
+
+      - name: sccache stats
+        if: ${{ always() }}
+        run: sccache --show-stats
 
   deny:
     runs-on: ubuntu-latest
