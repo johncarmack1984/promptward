@@ -11,11 +11,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hono/node-server": "^2.1.0",
+    "@hono/node-server": "^2.1.1",
     "@promptward/tripwire": "workspace:*",
     "ajv": "^8.20.0",
-    "hono": "^4.13.1",
-    "pg": "^8.22.0"
+    "hono": "^4.13.2",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
