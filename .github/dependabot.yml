@@ -13,6 +13,10 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # Matches pnpm-workspace.yaml's minimumReleaseAge (one day), so Dependabot
+    # never proposes a version its own pnpm run would then refuse to resolve.
+    cooldown:
+      default-days: 1
     groups:
       # React and its type packages travel together so a React major lands as one
       # buildable PR (bumping react without @types/react breaks the typecheck).
