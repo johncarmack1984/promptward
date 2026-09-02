@@ -4,12 +4,12 @@
 version: 2
 updates:
   # JavaScript / TypeScript -- the pnpm workspace (gateway, dashboard, evals, and
-  # the napi package). Globs cover apps/* and crates/*; the root has no deps.
+  # the napi package). Pointed at the workspace ROOT on purpose: Dependabot only
+  # rewrites the shared pnpm-lock.yaml when it runs from the directory that holds
+  # it. Split by apps/* it bumps each package.json and leaves the lockfile behind
+  # (dependabot/dependabot-core#11135), which is what kept breaking main.
   - package-ecosystem: "npm"
-    directories:
-      - "/apps/*"
-      - "/evals"
-      - "/crates/*"
+    directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10

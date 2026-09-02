@@ -43,10 +43,10 @@ jobs:
           cache-targets: "false"
 
       - name: Install
-        # Dependabot bumps package.json but does not regenerate pnpm-lock.yaml,
-        # so --frozen-lockfile would fail on its PRs. Keep it strict for human
-        # PRs; relax it for Dependabot only (CI still installs the bumped deps).
-        run: pnpm install ${{ github.actor == 'dependabot[bot]' && '--no-frozen-lockfile' || '--frozen-lockfile' }}
+        # Strict for everyone, Dependabot included: it runs from the workspace
+        # root now (see dependabot.yml) and regenerates pnpm-lock.yaml itself, so
+        # a PR whose lockfile lags its manifest is a bug this step should catch.
+        run: pnpm install --frozen-lockfile
 
       - name: Format gate (biome)
         run: pnpm exec biome check .
