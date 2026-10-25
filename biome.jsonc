@@ -1,7 +1,7 @@
 {
   // One lint/format layer, single config at the root. Formatter options match
   // the incumbent style so adoption stays lint-value, not a reformat.
-  "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -27,10 +27,7 @@
       "nursery": {
         // = prettier-plugin-tailwindcss: one canonical utility order in class
         // attributes and the cn/cva/clsx call sites.
-        "useSortedClasses": {
-          "level": "error",
-          "options": { "functions": ["cn", "cva", "clsx", "tw"] }
-        }
+        "useTailwindSortedClasses": "error"
       },
       "style": {
         // = eslint react-refresh/only-export-components (vite preset).
@@ -94,5 +91,14 @@
       "semicolons": "always",
       "trailingCommas": "all"
     }
+  },
+  // Biome 2.6 formats and lints Markdown and YAML by default. Neither was
+  // biome's before (pnpm-lock.yaml is pnpm's to write), so both stay off.
+  "markdown": { "formatter": { "enabled": false }, "linter": { "enabled": false } },
+  "yaml": { "formatter": { "enabled": false }, "linter": { "enabled": false } },
+  // The call sites useTailwindSortedClasses checks (cva's variants included).
+  "tailwind": {
+    "mergeFunctions": ["cn", "clsx", "tw"],
+    "variantFunctions": ["cva"]
   }
 }
